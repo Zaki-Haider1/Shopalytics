@@ -8,13 +8,24 @@ echo "  MongoDB Sharded Cluster Init Script"
 echo "========================================"
 
 # ─── Step 1: Initialize the Config Server replica set ─────────────
+
+# Practically 3 containers for each shard, all in the replica set
+#  members: [
+#    { _id: 0, host: "shard1:27017" },
+#    { _id: 1, host: "shard1-secondary1:27017" },
+#    { _id: 2, host: "shard1-secondary2:27017" }
+#  ]
+
+
 echo ""
 echo "[1/4] Initializing config server replica set..."
 docker exec configsvr mongosh --eval '
 rs.initiate({
   _id: "configReplSet",
   configsvr: true,
-  members: [{ _id: 0, host: "configsvr:27017" }]
+  members: [{ _id: 0, host: "configsvr:27017" }  
+  ]
+  
 })
 '
 echo "      Waiting 5s for config server to elect primary..."
@@ -29,6 +40,7 @@ rs.initiate({
   members: [{ _id: 0, host: "shard1:27017" }]
 })
 '
+
 
 echo "      Initializing shard 2 replica set (Sindh)..."
 docker exec shard2 mongosh --eval '
