@@ -2,14 +2,14 @@ import google.generativeai as genai
 import mysql.connector
 
 # ─── Configure Gemini ────────────────────────────────────────────
-genai.configure(api_key="GET YO OWN KEYYYYYYYYYYYs")
+genai.configure(api_key="abc, im an api key")
 model = genai.GenerativeModel("gemini-3-flash-preview")
 
 # ─── Connect to MySQL ────────────────────────────────────────────
 mysql_conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="GET YO OWN PASSWORDDDD",  # change this
+    password="12345",  # change this
     database="ecommerce_warehouse"
 )
 mysql_cursor = mysql_conn.cursor(buffered=True)

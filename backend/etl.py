@@ -10,7 +10,7 @@ mongo_db = mongo_client["ecommerce"]
 mysql_conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="GET OWN PASSWORDD NOOOOOOOOOOOB",  # change this
+    password="12345",  # change this
     database="ecommerce_warehouse"
 )
 mysql_cursor = mysql_conn.cursor(buffered=True)
