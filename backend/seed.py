@@ -11,9 +11,13 @@ from pymongo import MongoClient
 from faker import Faker
 from datetime import datetime, timedelta
 import random
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ─── CONFIG ─────────────────────────────────────────────────────────
-MONGO_URI = "mongodb://localhost:27017"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME   = "ecommerce"
 
 NUM_CUSTOMERS = 300

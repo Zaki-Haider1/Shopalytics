@@ -1,10 +1,14 @@
 import mysql.connector
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # 🔧 CONFIG
-DB_NAME = "ecommerce_warehouse"
-DB_USER = "root"
-DB_PASSWORD = "12345"
-DB_HOST = "localhost"
+DB_NAME = os.getenv("MYSQL_DB", "ecommerce_warehouse")
+DB_USER = os.getenv("MYSQL_USER", "root")
+DB_PASSWORD = os.getenv("MYSQL_PASSWORD", "12345")
+DB_HOST = os.getenv("MYSQL_HOST", "localhost")
 
 def create_database(cursor):
     cursor.execute(f"DROP DATABASE IF EXISTS {DB_NAME}")

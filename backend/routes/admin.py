@@ -1,13 +1,14 @@
 from flask import Blueprint, jsonify, request
 import mysql.connector
+import os
 
 admin_routes = Blueprint("admin", __name__)
 
 db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="12345",
-    database="ecommerce_warehouse"
+    host=os.getenv("MYSQL_HOST", "localhost"),
+    user=os.getenv("MYSQL_USER", "root"),
+    password=os.getenv("MYSQL_PASSWORD", "12345"),
+    database=os.getenv("MYSQL_DB", "ecommerce_warehouse")
 )
 
 cursor = db.cursor(dictionary=True)

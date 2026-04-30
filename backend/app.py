@@ -1,5 +1,9 @@
 from flask import Flask
 from flask_cors import CORS
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from routes.auth import auth_routes
 from routes.admin import admin_routes

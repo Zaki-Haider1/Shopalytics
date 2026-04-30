@@ -2,18 +2,22 @@ import mysql.connector
 from pymongo import MongoClient
 import pandas as pd
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
-MONGO_URI = "mongodb://localhost:27017"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB = "ecommerce"
 
 MYSQL_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "12345",
-    "database": "ecommerce_warehouse"
+    "host": os.getenv("MYSQL_HOST", "localhost"),
+    "user": os.getenv("MYSQL_USER", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", "12345"),
+    "database": os.getenv("MYSQL_DB", "ecommerce_warehouse")
 }
 
 # ─────────────────────────────────────────────
