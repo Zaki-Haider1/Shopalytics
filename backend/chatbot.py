@@ -2,7 +2,7 @@ import google.generativeai as genai
 import mysql.connector
 
 # ─── Configure Gemini ────────────────────────────────────────────
-genai.configure(api_key="abc, im an api key")
+genai.configure(api_key="AIzaSyDjyXFvNbOcrrNVkUvffxTLV_SkTljmsTs")
 model = genai.GenerativeModel("gemini-3-flash-preview")
 
 # ─── Connect to MySQL ────────────────────────────────────────────

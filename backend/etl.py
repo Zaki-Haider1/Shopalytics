@@ -1,191 +1,249 @@
-from pymongo import MongoClient
 import mysql.connector
+from pymongo import MongoClient
+import pandas as pd
 from datetime import datetime
 
-# Connect to MongoDB (via mongos router)
-mongo_client = MongoClient("mongodb://localhost:27017")
-mongo_db = mongo_client["ecommerce"]
+# ─────────────────────────────────────────────
+# CONFIG
+# ─────────────────────────────────────────────
+MONGO_URI = "mongodb://localhost:27017"
+MONGO_DB = "ecommerce"
 
-# Connect to MySQL
-mysql_conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="12345",  # change this
-    database="ecommerce_warehouse"
+MYSQL_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "12345",
+    "database": "ecommerce_warehouse"
+}
+
+# ─────────────────────────────────────────────
+# CONNECT
+# ─────────────────────────────────────────────
+mongo_client = MongoClient(MONGO_URI)
+mdb = mongo_client[MONGO_DB]
+
+sql_conn = mysql.connector.connect(**MYSQL_CONFIG)
+cursor = sql_conn.cursor()
+
+# ─────────────────────────────────────────────
+# EXTRACT
+# ─────────────────────────────────────────────
+suppliers = pd.DataFrame(list(mdb.suppliers.find()))
+products = pd.DataFrame(list(mdb.products.find()))
+customers = pd.DataFrame(list(mdb.customers.find()))
+orders = pd.DataFrame(list(mdb.orders.find()))
+reviews = pd.DataFrame(list(mdb.reviews.find()))
+events = pd.DataFrame(list(mdb.user_events.find()))
+
+# ─────────────────────────────────────────────
+# SAFE DATETIME
+# ─────────────────────────────────────────────
+for df in [customers, orders, reviews, events, products]:
+    for col in df.columns:
+        if "date" in col or "time" in col or col in ["created_at", "timestamp", "order_date", "review_date"]:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+
+# ─────────────────────────────────────────────
+# TRANSFORM
+# ─────────────────────────────────────────────
+
+# ── PRODUCTS
+
+categories_df = pd.DataFrame(products["category"].unique(), columns=["name"])
+categories_df["category_id"] = [
+    f"cat_{i+1}" for i in range(len(categories_df))
+]
+
+category_map = dict(zip(categories_df["name"], categories_df["category_id"]))
+
+products["category_id"] = products["category"].map(category_map)
+
+products_df = products.rename(columns={
+    "_id": "product_id",
+    "stock_quantity": "stock"
+})[[
+    "product_id",
+    "name",
+    "category_id",  
+    "price",
+    "cost_price",
+    "stock",
+    "supplier_id",
+    "ratings_avg",
+    "views_count",
+    "created_at"
+]]
+
+# ── CUSTOMERS
+customers_df = customers.rename(columns={
+    "_id": "customer_id"
+})[[
+    "customer_id", "name", "email", "created_at",
+    "last_login"
+]]
+
+# ── ORDERS
+orders_df = orders.rename(columns={
+    "_id": "order_id"
+})[[
+    "order_id", "customer_id", "order_date",
+    "status", "total_amount", "payment_method", "coupon_used"
+]]
+
+# ─────────────────────────────────────────────
+# ORDER ITEMS (FLATTEN NESTED ARRAY)
+# ─────────────────────────────────────────────
+order_items_list = []
+
+product_cost_map = products.set_index("_id")["cost_price"].to_dict()
+
+for _, order in orders.iterrows():
+    for item in order.get("items", []):
+        cost_price = product_cost_map.get(item["product_id"], 0)
+
+        profit = (item["unit_price"] - cost_price) * item["quantity"]
+
+        order_items_list.append({
+            "order_item_id": f"{order['_id']}_{item['product_id']}",
+            "order_id": order["_id"],
+            "product_id": item["product_id"],
+            "quantity": item["quantity"],
+            "price": item["unit_price"],
+            "discount": item.get("discount", 0),
+            "subtotal": item.get("subtotal", item["unit_price"] * item["quantity"]),
+            "cost_price": cost_price,
+            "profit": profit
+        })
+
+order_items_df = pd.DataFrame(order_items_list)
+
+# ─────────────────────────────────────────────
+# REVIEWS
+# ─────────────────────────────────────────────
+reviews_df = reviews.rename(columns={
+    "_id": "review_id"
+})[[
+    "review_id", "product_id", "customer_id",
+    "rating", "comment", "review_date"
+]]
+
+# ─────────────────────────────────────────────
+# USER EVENTS
+# ─────────────────────────────────────────────
+events_df = events.rename(columns={
+    "_id": "event_id",
+    "user_id": "customer_id",
+    "event_type": "activity_type",
+    "timestamp": "created_at"
+})[[
+    "event_id", "customer_id", "activity_type",
+    "product_id", "created_at", "device", "session_id"
+]]
+
+# ─────────────────────────────────────────────
+# DAILY METRICS
+# ─────────────────────────────────────────────
+orders["date"] = pd.to_datetime(orders["order_date"]).dt.date
+
+daily_metrics = orders.groupby("date").agg(
+    total_revenue=("total_amount", "sum"),
+    total_orders=("_id", "count")
+).reset_index()
+
+# profit
+profit_df = order_items_df.merge(
+    orders[["_id", "order_date"]],
+    left_on="order_id",
+    right_on="_id"
 )
-mysql_cursor = mysql_conn.cursor(buffered=True)
 
-print("Connected to both databases!")
+profit_df["date"] = pd.to_datetime(profit_df["order_date"]).dt.date
 
-'''
-# ─── Step 1: Load Regions ────────────────────────────────────────
-print("Loading regions...")
+profit_daily = profit_df.groupby("date").agg(
+    total_profit=("profit", "sum")
+).reset_index()
 
-regions = ["Punjab", "Sindh", "KPK"]
+daily_metrics = daily_metrics.merge(profit_daily, on="date", how="left")
+daily_metrics["total_profit"] = daily_metrics["total_profit"].fillna(0)
 
-for region in regions:
-    mysql_cursor.execute("""
-        INSERT IGNORE INTO dim_regions (region_name)
-        VALUES (%s)
-    """, (region,))
+# customers per day
+customers["date"] = pd.to_datetime(customers["created_at"]).dt.date
 
-mysql_conn.commit()
-print("  Regions done!")
-'''
+new_customers = customers.groupby("date").size().reset_index(name="new_customers")
 
+daily_metrics = daily_metrics.merge(new_customers, on="date", how="left").fillna(0)
 
-# ─── Step 1: Load Regions ────────────────────────────────────────
-print("Loading regions...")
+daily_metrics = daily_metrics.sort_values("date")
+daily_metrics["total_customers"] = daily_metrics["new_customers"].cumsum()
 
-regions = ["Punjab", "Sindh", "KPK"]
+# ─────────────────────────────────────────────
+# PRODUCT PERFORMANCE
+# ─────────────────────────────────────────────
+product_sales = order_items_df.groupby("product_id").agg(
+    total_sales=("quantity", "sum"),
+    total_revenue=("subtotal", "sum")
+).reset_index()
 
-# Clear and reload regions fresh every time
-mysql_cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-mysql_cursor.execute("TRUNCATE TABLE fact_orders")
-mysql_cursor.execute("TRUNCATE TABLE dim_customers")
-mysql_cursor.execute("TRUNCATE TABLE dim_products")
-mysql_cursor.execute("TRUNCATE TABLE dim_date")
-mysql_cursor.execute("TRUNCATE TABLE dim_regions")
-mysql_cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+product_reviews = reviews_df.groupby("product_id").agg(
+    avg_rating=("rating", "mean"),
+    total_reviews=("rating", "count")
+).reset_index()
 
-for region in regions:
-    mysql_cursor.execute("""
-        INSERT INTO dim_regions (region_name)
-        VALUES (%s)
-    """, (region,))
+product_perf = product_sales.merge(product_reviews, on="product_id", how="left")
 
-mysql_conn.commit()
-print("  Regions done!")
+product_perf["avg_rating"] = product_perf["avg_rating"].fillna(0)
+product_perf["total_reviews"] = product_perf["total_reviews"].fillna(0).astype(int)
+product_perf["last_updated"] = datetime.now()
 
-# ─── Step 2: Extract customers from MongoDB, Load into MySQL ─────
-print("Loading customers...")
+# ─────────────────────────────────────────────
+# CUSTOMER SUMMARY
+# ─────────────────────────────────────────────
+customer_summary = orders.groupby("customer_id").agg(
+    total_spent=("total_amount", "sum"),
+    total_orders=("_id", "count") 
+)
 
-# Extract from MongoDB
-customers = mongo_db.customers.find()
+customer_summary["avg_order_value"] = (
+    customer_summary["total_spent"] / customer_summary["total_orders"]
+)
 
-for customer in customers:
-    # Get the region_id from dim_regions
-    mysql_cursor.execute(
-        "SELECT region_id FROM dim_regions WHERE region_name = %s",
-        (customer["address"]["region"],)
-    )
-    region_row = mysql_cursor.fetchone()
-    region_id = region_row[0] if region_row else None
+last_order = orders.groupby("customer_id")["order_date"].max().reset_index()
+last_order.rename(columns={"order_date": "last_order_date"}, inplace=True)
 
-    # Load into MySQL
-    mysql_cursor.execute("""
-        INSERT IGNORE INTO dim_customers
-        (customer_id, name, email, phone, city, region_id, country)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (
-        customer["_id"],
-        customer["name"],
-        customer["email"],
-        customer["phone"],
-        customer["address"]["city"],
-        region_id,
-        customer["address"]["country"]
-    ))
+customer_summary = customer_summary.merge(last_order, on="customer_id")
 
-mysql_conn.commit()
-print(f"  Customers done!")
+# ─────────────────────────────────────────────
+# LOAD HELPER
+# ─────────────────────────────────────────────
+def insert_df(table, df):
+    if df.empty:
+        return
 
+    df = df.where(pd.notnull(df), None)
 
-# ─── Step 3: Extract products from MongoDB, Load into MySQL ──────
-print("Loading products...")
+    cursor.execute(f"DELETE FROM {table}")
 
-products = mongo_db.products.find()
+    cols = ", ".join(df.columns)
+    vals = ", ".join(["%s"] * len(df.columns))
+    query = f"INSERT INTO {table} ({cols}) VALUES ({vals})"
 
-for product in products:
-    mysql_cursor.execute("""
-        INSERT IGNORE INTO dim_products
-        (product_id, name, category, sub_category, brand, price, supplier_id)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (
-        product["_id"],
-        product["name"],
-        product["category"],
-        product["sub_category"],
-        product["brand"],
-        product["price"],
-        product["supplier_id"]
-    ))
+    for _, row in df.iterrows():
+        cursor.execute(query, tuple(row))
 
-mysql_conn.commit()
-print("  Products done!")
+# ─────────────────────────────────────────────
+# LOAD
+# ─────────────────────────────────────────────
+insert_df("products", products_df)
+insert_df("customers", customers_df)
+insert_df("orders", orders_df)
+insert_df("order_items", order_items_df)
+insert_df("reviews", reviews_df)
+insert_df("customer_activity", events_df)
 
+insert_df("daily_metrics", daily_metrics)
+insert_df("product_performance", product_perf)
+insert_df("customer_summary", customer_summary)
 
-# ─── Step 4: Generate date dimension from order dates ────────────
-print("Loading dates...")
+sql_conn.commit()
 
-orders = mongo_db.orders.find()
-
-for order in orders:
-    order_date = order["order_date"]
-    
-    # Generate a unique date_id from the date e.g 20240315
-    date_id = int(order_date.strftime("%Y%m%d"))
-    
-    # Get quarter from month
-    quarter = (order_date.month - 1) // 3 + 1
-
-    mysql_cursor.execute("""
-        INSERT IGNORE INTO dim_date
-        (date_id, full_date, day, month, month_name, quarter, year)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (
-        date_id,
-        order_date.date(),
-        order_date.day,
-        order_date.month,
-        order_date.strftime("%B"),  # full month name e.g "March"
-        quarter,
-        order_date.year
-    ))
-
-mysql_conn.commit()
-print("  Dates done!")
-
-# ─── Step 5: Extract orders from MongoDB, Load into fact_orders ──
-print("Loading orders...")
-
-orders = mongo_db.orders.find()
-
-for order in orders:
-    # Get region_id
-    mysql_cursor.execute(
-        "SELECT region_id FROM dim_regions WHERE region_name = %s",
-        (order["region"],)
-    )
-    region_row = mysql_cursor.fetchone()
-    region_id = region_row[0] if region_row else None
-
-    # Get date_id
-    date_id = int(order["order_date"].strftime("%Y%m%d"))
-
-    # One row per item in the order
-    for item in order["items"]:
-        mysql_cursor.execute("""
-            INSERT IGNORE INTO fact_orders
-            (order_id, customer_id, product_id, region_id, date_id,
-            quantity, unit_price, discount, subtotal,
-            payment_method, payment_status, order_status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            order["_id"],
-            order["customer_id"],
-            item["product_id"],
-            region_id,
-            date_id,
-            item["quantity"],
-            item["unit_price"],
-            item["discount"],
-            item["subtotal"],
-            order["payment"]["method"],
-            order["payment"]["status"],
-            order["status"]
-        ))
-
-mysql_conn.commit()
-print("  Orders done!")
-print("\n========== ETL Complete! ==========")
+print("✅ ETL pipeline fully aligned with MongoDB + SQL schema")
