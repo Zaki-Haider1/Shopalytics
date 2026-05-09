@@ -1,0 +1,38 @@
+.product-info-link {
+  display: block;
+}
+
+.product-actions {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transform: translateX(20px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.product-card:hover .product-actions {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.action-btn {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: var(--primary);
+  color: white;
+}

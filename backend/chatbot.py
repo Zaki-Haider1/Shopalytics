@@ -1,16 +1,31 @@
 import google.generativeai as genai
 import mysql.connector
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ─── Configure Gemini ────────────────────────────────────────────
+<<<<<<< HEAD:chatbot.py
 genai.configure(api_key="AIzaSyDjyXFvNbOcrrNVkUvffxTLV_SkTljmsTs")
+=======
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+>>>>>>> 5e854b6b1d6c79253f0320f017253a39ba720082:backend/chatbot.py
 model = genai.GenerativeModel("gemini-3-flash-preview")
 
 # ─── Connect to MySQL ────────────────────────────────────────────
 mysql_conn = mysql.connector.connect(
+<<<<<<< HEAD:chatbot.py
     host="localhost",
     user="root",
     password="Mysqlpassword1!",  # change this
     database="ecommerce_warehouse"
+=======
+    host=os.getenv("MYSQL_HOST", "localhost"),
+    user=os.getenv("MYSQL_USER", "root"),
+    password=os.getenv("MYSQL_PASSWORD", "12345"),
+    database=os.getenv("MYSQL_DB", "ecommerce_warehouse")
+>>>>>>> 5e854b6b1d6c79253f0320f017253a39ba720082:backend/chatbot.py
 )
 mysql_cursor = mysql_conn.cursor(buffered=True)
 
