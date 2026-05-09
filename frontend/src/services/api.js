@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export const registerUser = async (formData) => {
   const res = await fetch(`${BASE_URL}/api/auth/register`, {
@@ -35,7 +35,29 @@ export const getAnalytics = async () => {
 };
 
 export const getProducts = async () => {
-  const res = await fetch(`${BASE_URL}/api/admin/products`);
+  const res = await fetch(`${BASE_URL}/api/store/products`);
+  return res.json();
+};
+
+export const getProduct = async (id) => {
+  const res = await fetch(`${BASE_URL}/api/store/products/${id}`);
+  return res.json();
+};
+
+export const placeOrder = async (orderData) => {
+  const res = await fetch(`${BASE_URL}/api/store/checkout`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(orderData),
+  });
+
+  return res.json();
+};
+
+export const getOrders = async () => {
+  const res = await fetch(`${BASE_URL}/api/store/orders`);
   return res.json();
 };
 

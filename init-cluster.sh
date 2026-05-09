@@ -33,7 +33,7 @@ sleep 5
 
 # ─── Step 2: Initialize each shard as its own replica set ─────────
 echo ""
-echo "[2/4] Initializing shard 1 replica set (Punjab)..."
+echo "[2/4] Initializing shard 1 replica set ..."
 docker exec shard1 mongosh --eval '
 rs.initiate({
   _id: "shard1ReplSet",
@@ -42,7 +42,7 @@ rs.initiate({
 '
 
 
-echo "      Initializing shard 2 replica set (Sindh)..."
+echo "Initializing shard 2 replica set..."
 docker exec shard2 mongosh --eval '
 rs.initiate({
   _id: "shard2ReplSet",
@@ -50,7 +50,7 @@ rs.initiate({
 })
 '
 
-echo "      Initializing shard 3 replica set (KPK)..."
+echo "Initializing shard 3 replica set..."
 docker exec shard3 mongosh --eval '
 rs.initiate({
   _id: "shard3ReplSet",
@@ -58,7 +58,7 @@ rs.initiate({
 })
 '
 
-echo "      Waiting 8s for shards to elect primaries..."
+echo "Waiting 8s for shards to elect primaries..."
 sleep 8
 
 # ─── Step 3: Register shards with the mongos router ───────────────

@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
 import Orders from './pages/Orders';
 import ChatbotWidget from './components/ChatbotWidget';
+import { CartProvider } from './context/CartContext';
 import './App.css';
 
 function App() {
@@ -26,25 +27,27 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="App">
-        <Navbar theme={theme} toggleTheme={toggleTheme} />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/product/:id" element={<ProductDetails />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/admin/*" element={<AdminDashboard />} />
-          </Routes>
-        </main>
-        <ChatbotWidget />
-      </div>
-    </Router>
+    <CartProvider>
+      <Router>
+        <div className="App">
+          <Navbar theme={theme} toggleTheme={toggleTheme} />
+          <main className="main-content">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/product/:id" element={<ProductDetails />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/admin/*" element={<AdminDashboard />} />
+            </Routes>
+          </main>
+          <ChatbotWidget />
+        </div>
+      </Router>
+    </CartProvider>
   );
 }
 

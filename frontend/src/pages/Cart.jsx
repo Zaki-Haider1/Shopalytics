@@ -1,16 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, ArrowRight } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 import './Cart.css';
 
 const Cart = () => {
-  // Mock cart data
-  const cartItems = [
-    { id: 1, name: 'Sony WH-1000XM5', price: 398.00, quantity: 1, image: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&w=200&q=80' },
-    { id: 3, name: 'Nike Air Max 270', price: 150.00, quantity: 2, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=200&q=80' }
-  ];
+  const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = getCartTotal();
   const tax = subtotal * 0.08;
   const total = subtotal + tax;
 
@@ -18,26 +15,31 @@ const Cart = () => {
     <div className="container cart-page">
       <h1 className="page-title">Shopping Cart</h1>
       
-      {cartItems.length > 0 ? (
+      {cart.length > 0 ? (
         <div className="cart-layout">
           <div className="cart-items-section">
             <div className="cart-items-list glass">
-              {cartItems.map(item => (
-                <div key={item.id} className="cart-item">
-                  <img src={item.image} alt={item.name} className="cart-item-img" />
+              {cart.map(item => (
+                <div key={item._id || item.id} className="cart-item">
+                  <img src={item.image || `https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=200&q=80`} alt={item.name} className="cart-item-img" />
                   <div className="cart-item-details">
                     <h3>{item.name}</h3>
                     <p className="cart-item-price">${item.price.toFixed(2)}</p>
                   </div>
                   <div className="quantity-selector">
-                    <button>-</button>
+                    <button onClick={() => updateQuantity(item._id || item.id, item.quantity - 1)}>-</button>
                     <span>{item.quantity}</span>
-                    <button>+</button>
+                    <button onClick={() => updateQuantity(item._id || item.id, item.quantity + 1)}>+</button>
                   </div>
                   <div className="cart-item-total">
                     ${(item.price * item.quantity).toFixed(2)}
                   </div>
-                  <button className="remove-btn"><Trash2 size={20} /></button>
+                  <button 
+                    className="remove-btn"
+                    onClick={() => removeFromCart(item._id || item.id)}
+                  >
+                    <Trash2 size={20} />
+                  </button>
                 </div>
               ))}
             </div>

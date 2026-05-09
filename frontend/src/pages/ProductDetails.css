@@ -23,25 +23,97 @@
   gap: 3rem;
 }
 
-.product-gallery {
+.product-gallery-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.main-image-wrapper {
   border-radius: var(--radius-lg);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  height: fit-content;
+  height: 500px;
+  position: relative;
+  background: var(--bg-surface);
 }
 
 .main-image {
-  width: 100%;
-  max-width: 500px;
-  height: auto;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
-  mix-blend-mode: multiply;
+  transition: opacity 0.3s ease-in-out;
 }
 
-[data-theme='dark'] .main-image {
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+}
+
+.carousel-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-btn.prev { left: 1rem; }
+.carousel-btn.next { right: 1rem; }
+
+.thumbnail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 1rem;
+}
+
+.thumbnail-item {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0.5rem;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumbnail-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--border);
+}
+
+.thumbnail-item.active {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.thumbnail-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+[data-theme='dark'] .main-image,
+[data-theme='dark'] .thumbnail-item img {
   mix-blend-mode: normal;
 }
 

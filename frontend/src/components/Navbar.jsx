@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, User, Search, Sun, Moon, Menu, X } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 import './Navbar.css';
 
 const Navbar = ({ theme, toggleTheme }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { getCartCount } = useCart();
   
   return (
     <nav className="navbar glass">
@@ -35,7 +37,7 @@ const Navbar = ({ theme, toggleTheme }) => {
           </Link>
           <Link to="/cart" className="icon-btn cart-btn">
             <ShoppingCart size={20} />
-            <span className="cart-badge">3</span>
+            {getCartCount() > 0 && <span className="cart-badge">{getCartCount()}</span>}
           </Link>
           <button className="icon-btn mobile-menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
