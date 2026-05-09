@@ -2,17 +2,21 @@ from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load environment variables from .env if it exists (mainly for local development)
+if os.path.exists("../.env"):
+    load_dotenv("../.env")
+elif os.path.exists(".env"):
+    load_dotenv(".env")
 
 # ─── Connection ─────────────────────────────────────────────
 # Connect to mongos router (NOT shards)
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB = "ecommerce"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+MONGODB_DB = os.getenv("MONGODB_DB", "ecommerce")
 
 client = MongoClient(MONGO_URI)
 
 # Main database (keep consistent everywhere)
-db = client["MONGODB_DB"]
+db = client[MONGODB_DB]
 
 # ─── Collections ────────────────────────────────────────────
 

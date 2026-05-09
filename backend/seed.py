@@ -14,7 +14,7 @@ import random
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv("../.env")
 
 # ─── CONFIG ─────────────────────────────────────────────────────────
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
@@ -43,7 +43,7 @@ collections = [
 for col in collections:
     db[col].drop()
 
-print("🧹 Cleared existing collections.")
+print(" Cleared existing collections.")
 
 # ─── SUPPLIERS ──────────────────────────────────────────────────────
 suppliers = []
@@ -257,6 +257,6 @@ for i, order in enumerate(orders):
 db.payments.insert_many(payments)
 
 # ─── DONE ───────────────────────────────────────────────────────────
-print("\n✅ Seeding Complete!")
+print("\n Seeding Complete!")
 for col in collections:
     print(f"{col}: {db[col].count_documents({})}")

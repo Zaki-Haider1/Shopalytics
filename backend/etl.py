@@ -5,13 +5,15 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
+# Load from multiple locations to be safe
+load_dotenv(".env")
 load_dotenv("../.env")
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────
 # CONFIG
-# ─────────────────────────────────────────────
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB = "ecommerce"
+# ─────────────────────────────
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+MONGODB_DB = os.getenv("MONGODB_DB", "ecommerce")
 
 MYSQL_CONFIG = {
     "host": os.getenv("MYSQL_HOST", "localhost"),
@@ -20,234 +22,121 @@ MYSQL_CONFIG = {
     "database": os.getenv("MYSQL_DB", "ecommerce_warehouse")
 }
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────
 # CONNECT
-# ─────────────────────────────────────────────
-mongo_client = MongoClient(MONGO_URI)
-mdb = mongo_client[MONGO_DB]
+# ─────────────────────────────
+try:
+    mongo_client = MongoClient(MONGO_URI)
+    mdb = mongo_client[MONGODB_DB]
+    sql_conn = mysql.connector.connect(**MYSQL_CONFIG)
+    cursor = sql_conn.cursor()
+    print("Connected to MongoDB and MySQL")
+except Exception as e:
+    print(f"Connection Error: {e}")
+    exit(1)
 
-sql_conn = mysql.connector.connect(**MYSQL_CONFIG)
-cursor = sql_conn.cursor()
-
-# ─────────────────────────────────────────────
+# ─────────────────────────────
 # EXTRACT
-# ─────────────────────────────────────────────
-suppliers = pd.DataFrame(list(mdb.suppliers.find()))
-products = pd.DataFrame(list(mdb.products.find()))
-customers = pd.DataFrame(list(mdb.customers.find()))
-orders = pd.DataFrame(list(mdb.orders.find()))
-reviews = pd.DataFrame(list(mdb.reviews.find()))
-events = pd.DataFrame(list(mdb.user_events.find()))
+# ─────────────────────────────
+def get_df(collection):
+    df = pd.DataFrame(list(mdb[collection].find()))
+    # Convert NaN to None for MySQL compatibility
+    if not df.empty:
+        df = df.replace({pd.NA: None, float('nan'): None})
+    return df
 
-# ─────────────────────────────────────────────
-# SAFE DATETIME
-# ─────────────────────────────────────────────
-for df in [customers, orders, reviews, events, products]:
-    for col in df.columns:
-        if "date" in col or "time" in col or col in ["created_at", "timestamp", "order_date", "review_date"]:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
+customers = get_df("customers")
+products = get_df("products")
+orders = get_df("orders")
 
-# ─────────────────────────────────────────────
-# TRANSFORM
-# ─────────────────────────────────────────────
+# Check if data exists
+if customers.empty or products.empty:
+    print("Warning: MongoDB collections are empty. Run seed.py first.")
+    exit(0)
 
-# ── PRODUCTS
+# ─────────────────────────────
+# TRANSFORM & LOAD DIMENSIONS
+# ─────────────────────────────
 
-categories_df = pd.DataFrame(products["category"].unique(), columns=["name"])
-categories_df["category_id"] = [
-    f"cat_{i+1}" for i in range(len(categories_df))
-]
+# 1. dim_regions
+if "region" in customers.columns:
+    regions = customers["region"].unique()
+else:
+    regions = ["Default"]
 
-category_map = dict(zip(categories_df["name"], categories_df["category_id"]))
+for r in regions:
+    cursor.execute("INSERT IGNORE INTO dim_regions (region_name) VALUES (%s)", (r,))
+sql_conn.commit()
 
-products["category_id"] = products["category"].map(category_map)
+cursor.execute("SELECT region_id, region_name FROM dim_regions")
+region_map = {name: rid for (rid, name) in cursor.fetchall()}
 
-products_df = products.rename(columns={
-    "_id": "product_id",
-    "stock_quantity": "stock"
-})[[
-    "product_id",
-    "name",
-    "category_id",  
-    "price",
-    "cost_price",
-    "stock",
-    "supplier_id",
-    "ratings_avg",
-    "views_count",
-    "created_at"
-]]
+# 2. dim_customers
+for _, row in customers.iterrows():
+    reg_name = row.get("region", "Default")
+    cursor.execute("""
+        INSERT INTO dim_customers (customer_id, name, email, phone, city, region_id)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email)
+    """, (row["_id"], row["name"], row["email"], row.get("phone", "N/A"), row.get("city", "N/A"), region_map.get(reg_name, 1)))
 
-# ── CUSTOMERS
-customers_df = customers.rename(columns={
-    "_id": "customer_id"
-})[[
-    "customer_id", "name", "email", "created_at",
-    "last_login"
-]]
+# 3. dim_products
+for _, row in products.iterrows():
+    cursor.execute("""
+        INSERT INTO dim_products (product_id, name, category, sub_category, brand, price, supplier_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price)
+    """, (row["_id"], row["name"], row["category"], row.get("sub_category", ""), row.get("brand", ""), row["price"], row.get("supplier_id", "")))
 
-# ── ORDERS
-orders_df = orders.rename(columns={
-    "_id": "order_id"
-})[[
-    "order_id", "customer_id", "order_date",
-    "status", "total_amount", "payment_method", "coupon_used"
-]]
-
-# ─────────────────────────────────────────────
-# ORDER ITEMS (FLATTEN NESTED ARRAY)
-# ─────────────────────────────────────────────
-order_items_list = []
-
-product_cost_map = products.set_index("_id")["cost_price"].to_dict()
-
-for _, order in orders.iterrows():
-    for item in order.get("items", []):
-        cost_price = product_cost_map.get(item["product_id"], 0)
-
-        profit = (item["unit_price"] - cost_price) * item["quantity"]
-
-        order_items_list.append({
-            "order_item_id": f"{order['_id']}_{item['product_id']}",
-            "order_id": order["_id"],
-            "product_id": item["product_id"],
-            "quantity": item["quantity"],
-            "price": item["unit_price"],
-            "discount": item.get("discount", 0),
-            "subtotal": item.get("subtotal", item["unit_price"] * item["quantity"]),
-            "cost_price": cost_price,
-            "profit": profit
-        })
-
-order_items_df = pd.DataFrame(order_items_list)
-
-# ─────────────────────────────────────────────
-# REVIEWS
-# ─────────────────────────────────────────────
-reviews_df = reviews.rename(columns={
-    "_id": "review_id"
-})[[
-    "review_id", "product_id", "customer_id",
-    "rating", "comment", "review_date"
-]]
-
-# ─────────────────────────────────────────────
-# USER EVENTS
-# ─────────────────────────────────────────────
-events_df = events.rename(columns={
-    "_id": "event_id",
-    "user_id": "customer_id",
-    "event_type": "activity_type",
-    "timestamp": "created_at"
-})[[
-    "event_id", "customer_id", "activity_type",
-    "product_id", "created_at", "device", "session_id"
-]]
-
-# ─────────────────────────────────────────────
-# DAILY METRICS
-# ─────────────────────────────────────────────
-orders["date"] = pd.to_datetime(orders["order_date"]).dt.date
-
-daily_metrics = orders.groupby("date").agg(
-    total_revenue=("total_amount", "sum"),
-    total_orders=("_id", "count")
-).reset_index()
-
-# profit
-profit_df = order_items_df.merge(
-    orders[["_id", "order_date"]],
-    left_on="order_id",
-    right_on="_id"
-)
-
-profit_df["date"] = pd.to_datetime(profit_df["order_date"]).dt.date
-
-profit_daily = profit_df.groupby("date").agg(
-    total_profit=("profit", "sum")
-).reset_index()
-
-daily_metrics = daily_metrics.merge(profit_daily, on="date", how="left")
-daily_metrics["total_profit"] = daily_metrics["total_profit"].fillna(0)
-
-# customers per day
-customers["date"] = pd.to_datetime(customers["created_at"]).dt.date
-
-new_customers = customers.groupby("date").size().reset_index(name="new_customers")
-
-daily_metrics = daily_metrics.merge(new_customers, on="date", how="left").fillna(0)
-
-daily_metrics = daily_metrics.sort_values("date")
-daily_metrics["total_customers"] = daily_metrics["new_customers"].cumsum()
-
-# ─────────────────────────────────────────────
-# PRODUCT PERFORMANCE
-# ─────────────────────────────────────────────
-product_sales = order_items_df.groupby("product_id").agg(
-    total_sales=("quantity", "sum"),
-    total_revenue=("subtotal", "sum")
-).reset_index()
-
-product_reviews = reviews_df.groupby("product_id").agg(
-    avg_rating=("rating", "mean"),
-    total_reviews=("rating", "count")
-).reset_index()
-
-product_perf = product_sales.merge(product_reviews, on="product_id", how="left")
-
-product_perf["avg_rating"] = product_perf["avg_rating"].fillna(0)
-product_perf["total_reviews"] = product_perf["total_reviews"].fillna(0).astype(int)
-product_perf["last_updated"] = datetime.now()
-
-# ─────────────────────────────────────────────
-# CUSTOMER SUMMARY
-# ─────────────────────────────────────────────
-customer_summary = orders.groupby("customer_id").agg(
-    total_spent=("total_amount", "sum"),
-    total_orders=("_id", "count") 
-)
-
-customer_summary["avg_order_value"] = (
-    customer_summary["total_spent"] / customer_summary["total_orders"]
-)
-
-last_order = orders.groupby("customer_id")["order_date"].max().reset_index()
-last_order.rename(columns={"order_date": "last_order_date"}, inplace=True)
-
-customer_summary = customer_summary.merge(last_order, on="customer_id")
-
-# ─────────────────────────────────────────────
-# LOAD HELPER
-# ─────────────────────────────────────────────
-def insert_df(table, df):
-    if df.empty:
-        return
-
-    df = df.where(pd.notnull(df), None)
-
-    cursor.execute(f"DELETE FROM {table}")
-
-    cols = ", ".join(df.columns)
-    vals = ", ".join(["%s"] * len(df.columns))
-    query = f"INSERT INTO {table} ({cols}) VALUES ({vals})"
-
-    for _, row in df.iterrows():
-        cursor.execute(query, tuple(row))
-
-# ─────────────────────────────────────────────
-# LOAD
-# ─────────────────────────────────────────────
-insert_df("products", products_df)
-insert_df("customers", customers_df)
-insert_df("orders", orders_df)
-insert_df("order_items", order_items_df)
-insert_df("reviews", reviews_df)
-insert_df("customer_activity", events_df)
-
-insert_df("daily_metrics", daily_metrics)
-insert_df("product_performance", product_perf)
-insert_df("customer_summary", customer_summary)
+# 4. dim_date (Generate from orders)
+order_dates = pd.to_datetime(orders["order_date"])
+for dt in order_dates.unique():
+    ts = pd.Timestamp(dt)
+    date_id = int(ts.strftime("%Y%m%d"))
+    cursor.execute("""
+        INSERT IGNORE INTO dim_date (date_id, full_date, day, month, month_name, quarter, year)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (date_id, ts.date(), ts.day, ts.month, ts.strftime("%B"), ts.quarter, ts.year))
 
 sql_conn.commit()
 
-print("✅ ETL pipeline fully aligned with MongoDB + SQL schema")
+# ─────────────────────────────
+# TRANSFORM & LOAD FACT
+# ─────────────────────────────
+cursor.execute("DELETE FROM fact_orders") # Clear for fresh reload
+
+for _, order in orders.iterrows():
+    o_date = pd.to_datetime(order["order_date"])
+    date_id = int(o_date.strftime("%Y%m%d"))
+    
+    # Ensure customer exists in dim_customers (handle Guests)
+    customer_id = order["customer_id"]
+    cursor.execute("SELECT customer_id FROM dim_customers WHERE customer_id = %s", (customer_id,))
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO dim_customers (customer_id, name, email, city, region_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (customer_id, "Guest Customer", "guest@example.com", "Unknown", 1))
+    
+    # Get region_id for this customer
+    cust = customers[customers["_id"] == customer_id]
+    reg_id = 1 # Default
+    if not cust.empty:
+        reg_name = cust.iloc[0].get("region", "Default")
+        reg_id = region_map.get(reg_name, 1)
+
+    for item in order.get("items", []):
+        cursor.execute("""
+            INSERT INTO fact_orders (
+                order_id, customer_id, product_id, region_id, date_id,
+                quantity, unit_price, discount, subtotal, 
+                payment_method, payment_status, order_status
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            str(order["_id"]), order["customer_id"], item["product_id"], reg_id, date_id,
+            item["quantity"], item["unit_price"], item.get("discount", 0), item["subtotal"],
+            order.get("payment_method", "cash"), order.get("payment_status", "pending"), order["status"]
+        ))
+
+sql_conn.commit()
+print("ETL pipeline successfully populated Star Schema")

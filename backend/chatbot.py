@@ -9,8 +9,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL")
 
 # ─── Configure Gemini ────────────────────────────────────────────
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("GEMINI_MODEL")
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel(GEMINI_MODEL)
 
 # ─── Connect to MySQL ────────────────────────────────────────────
 mysql_conn = mysql.connector.connect(
