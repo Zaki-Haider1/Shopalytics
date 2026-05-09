@@ -78,15 +78,17 @@ for _, row in customers.iterrows():
         INSERT INTO dim_customers (customer_id, name, email, phone, city, region_id)
         VALUES (%s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email)
-    """, (row["_id"], row["name"], row["email"], row.get("phone", "N/A"), row.get("city", "N/A"), region_map.get(reg_name, 1)))
+    """, (str(row["_id"]), row["name"], row["email"], row.get("phone", "N/A"), row.get("city", "N/A"), region_map.get(reg_name, 1)))
 
 # 3. dim_products
 for _, row in products.iterrows():
+    # Ensure price is float and ID is string
+    price = float(row["price"]) if row.get("price") is not None else 0.0
     cursor.execute("""
         INSERT INTO dim_products (product_id, name, category, sub_category, brand, price, supplier_id)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price)
-    """, (row["_id"], row["name"], row["category"], row.get("sub_category", ""), row.get("brand", ""), row["price"], row.get("supplier_id", "")))
+    """, (str(row["_id"]), row["name"], row.get("category", "Uncategorized"), row.get("sub_category", ""), row.get("brand", ""), price, row.get("supplier_id", "")))
 
 # 4. dim_date (Generate from orders)
 order_dates = pd.to_datetime(orders["order_date"])

@@ -24,7 +24,16 @@ def get_products():
 @store_routes.route("/products/<product_id>", methods=["GET"])
 def get_product(product_id):
     try:
-        product = products_collection.find_one({"_id": product_id}) # Using string IDs as per seed.py
+        # Try finding by string ID first (for legacy/seeded data)
+        product = products_collection.find_one({"_id": product_id})
+        
+        # If not found, try as a MongoDB ObjectId (for new form-added data)
+        if not product:
+            try:
+                product = products_collection.find_one({"_id": ObjectId(product_id)})
+            except:
+                pass
+                
         if not product:
             return jsonify({"error": "Product not found"}), 404
             

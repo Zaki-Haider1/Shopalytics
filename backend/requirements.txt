@@ -2,8 +2,7 @@ flask
 flask-cors
 pymongo
 mysql-connector-python
-bcrypt
-google-generativeai
 pandas
-faker
 python-dotenv
+google-generativeai
+bcrypt
