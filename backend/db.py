@@ -7,11 +7,12 @@ load_dotenv()
 # ─── Connection ─────────────────────────────────────────────
 # Connect to mongos router (NOT shards)
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_DB = "ecommerce"
 
 client = MongoClient(MONGO_URI)
 
 # Main database (keep consistent everywhere)
-db = client["ecommerce"]
+db = client["MONGODB_DB"]
 
 # ─── Collections ────────────────────────────────────────────
 

@@ -18,7 +18,7 @@ load_dotenv()
 
 # ─── CONFIG ─────────────────────────────────────────────────────────
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME   = "ecommerce"
+DB_NAME   = os.getenv("MONGODB_DB")
 
 NUM_CUSTOMERS = 300
 NUM_PRODUCTS  = 120

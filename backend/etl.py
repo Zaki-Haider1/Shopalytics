@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv("../.env")
 
 # ─────────────────────────────────────────────
 # CONFIG
