@@ -33,12 +33,18 @@ Shopalytics is a high-performance, full-stack E-commerce platform designed with 
 ### 1. Environment Configuration
 Create a `.env` file in the root directory and add the following:
 ```env
-MONGO_URI=mongodb://localhost:27017/
+
 MYSQL_HOST=localhost
 MYSQL_USER=your_user
 MYSQL_PASSWORD=your_password
-MYSQL_DB=shopalytics_warehouse
+MYSQL_DB=ecommerce_warehouse
+
+MONGO_URI=mongodb://localhost:27017/
+MONGODB_DB=ecommerce
+
 GEMINI_API_KEY=your_gemini_key
+GEMINI_MODEL=gemini-3-flash-preview (for free gemin api key, otherwise use whichever model you prefer)
+
 ```
 
 ### 2. Launching with Docker
