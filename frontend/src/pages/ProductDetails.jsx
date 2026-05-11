@@ -5,6 +5,16 @@ import { getProduct } from '../services/api';
 import { useCart } from '../context/CartContext';
 import './ProductDetails.css';
 
+const categoryPlaceholders = {
+  "Electronics": "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=600&q=80",
+  "Clothing": "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=600&q=80",
+  "Books": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=600&q=80",
+  "Home & Kitchen": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80",
+  "Sports": "https://itemit.com/_next/image?url=%2Fimages%2Fblog%2Fcdn%2FSports-Equipment-For-The-Olympics-.png&w=3840&q=75"
+};
+
+const DEFAULT_FALLBACK = "https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&w=600&q=80";
+
 const ProductDetails = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -17,8 +27,10 @@ const ProductDetails = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const data = await getProduct(id);
-        setProduct(data);
+        const res = await getProduct(id);
+        if (res.success) {
+          setProduct(res.product);
+        }
       } catch (err) {
         console.error("Error fetching product:", err);
       } finally {
@@ -45,7 +57,8 @@ const ProductDetails = () => {
     if (product.images && Array.isArray(product.images) && product.images.length > 0) {
       return product.images;
     }
-    return [product.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80'];
+    const placeholder = categoryPlaceholders[product.category] || DEFAULT_FALLBACK;
+    return [product.image || placeholder];
   };
 
   const images = getImages();
@@ -61,7 +74,7 @@ const ProductDetails = () => {
   return (
     <div className="product-details-page container">
       <div className="breadcrumb">
-        <Link to="/">Home</Link> &gt; <Link to="/products">Electronics</Link> &gt; <span>{product.name}</span>
+        <Link to="/">Home</Link> &gt; <Link to={`/products?category=${product.category}`}>{product.category}</Link> &gt; <span>{product.name}</span>
       </div>
 
       <div className="product-details-grid">
@@ -102,11 +115,11 @@ const ProductDetails = () => {
             <h1 className="detail-title">{product.name}</h1>
             <div className="detail-rating">
               <Star className="star-icon filled" size={18} />
-              <span className="review-count">({product.reviews_count || 0} reviews)</span>
+              <span className="review-count">({product.ratings_avg || 0})</span>
             </div>
-            <div className="detail-price">${(product.price || 0).toFixed(2)}</div>
-            <div className={`stock-status ${(product.stock > 0) ? 'in-stock' : 'out-of-stock'}`}>
-              {(product.stock > 0) ? 'In Stock' : 'Out of Stock'}
+            <div className="detail-price">Rs.{(product.price || 0).toLocaleString()}</div>
+            <div className={`stock-status ${(product.stock_quantity > 0) ? 'in-stock' : 'out-of-stock'}`}>
+              {(product.stock_quantity > 0) ? `In Stock (${product.stock_quantity})` : 'Out of Stock'}
             </div>
           </div>
 

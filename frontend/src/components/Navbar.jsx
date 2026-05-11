@@ -1,13 +1,83 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingCart, User, Search, Sun, Moon, Menu, X } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, User, Search, Sun, Moon, Menu, X, Package, Tag } from 'lucide-react';
+import { getProducts, getCategories } from '../services/api';
 import './Navbar.css';
 
 const Navbar = ({ theme, toggleTheme }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { getCartCount } = useCart();
-  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [allData, setAllData] = useState({ products: [], categories: [] });
+  const navigate = useNavigate();
+  const searchRef = useRef(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [productsRes, categoriesRes] = await Promise.all([
+          getProducts(),
+          getCategories()
+        ]);
+        if (productsRes.success && categoriesRes.success) {
+          setAllData({
+            products: productsRes.products,
+            categories: categoriesRes.categories
+          });
+        }
+      } catch (err) {
+        console.error("Navbar data fetch error:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim().length > 1) {
+      const filteredCategories = allData.categories
+        .filter(cat => cat.toLowerCase().includes(searchQuery.toLowerCase()))
+        .map(cat => ({ type: 'category', value: cat }));
+
+      const filteredProducts = allData.products
+        .filter(prod => prod.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .map(prod => ({ type: 'product', value: prod.name, id: prod._id }));
+
+      setSuggestions([...filteredCategories, ...filteredProducts].slice(0, 5));
+      setShowSuggestions(true);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchQuery, allData]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      setShowSuggestions(false);
+      navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setShowSuggestions(false);
+    setSearchQuery('');
+    if (suggestion.type === 'category') {
+      navigate(`/products?category=${encodeURIComponent(suggestion.value)}`);
+    } else {
+      navigate(`/products?search=${encodeURIComponent(suggestion.value)}`);
+    }
+  };
+
   return (
     <nav className="navbar glass">
       <div className="container navbar-container">
@@ -17,9 +87,34 @@ const Navbar = ({ theme, toggleTheme }) => {
           </Link>
         </div>
 
-        <div className="search-bar desktop-search">
-          <input type="text" placeholder="Search products, brands..." className="input-field" />
-          <button className="search-btn"><Search size={18} /></button>
+        <div className="search-bar-container desktop-search" ref={searchRef}>
+          <form className="search-bar" onSubmit={(e) => { e.preventDefault(); handleSearch(e); }}>
+            <input 
+              type="text" 
+              placeholder="Search products, categories..." 
+              className="input-field" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
+            />
+            <button type="submit" className="search-btn"><Search size={18} /></button>
+          </form>
+          
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="search-suggestions glass">
+              {suggestions.map((item, index) => (
+                <div 
+                  key={index} 
+                  className="suggestion-item"
+                  onClick={() => handleSuggestionClick(item)}
+                >
+                  {item.type === 'category' ? <Tag size={14} className="mr-2" /> : <Package size={14} className="mr-2" />}
+                  <span className="suggestion-text">{item.value}</span>
+                  <span className="suggestion-type">{item.type}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className={`navbar-links ${isMenuOpen ? 'active' : ''}`}>
@@ -37,7 +132,7 @@ const Navbar = ({ theme, toggleTheme }) => {
           </Link>
           <Link to="/cart" className="icon-btn cart-btn">
             <ShoppingCart size={20} />
-            {getCartCount() > 0 && <span className="cart-badge">{getCartCount()}</span>}
+            <span className="cart-badge">3</span>
           </Link>
           <button className="icon-btn mobile-menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -47,10 +142,16 @@ const Navbar = ({ theme, toggleTheme }) => {
       
       {/* Mobile Search */}
       <div className="mobile-search glass">
-        <div className="search-bar">
-          <input type="text" placeholder="Search..." className="input-field" />
-          <button className="search-btn"><Search size={18} /></button>
-        </div>
+        <form className="search-bar" onSubmit={(e) => { e.preventDefault(); handleSearch(e); }}>
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            className="input-field"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button type="submit" className="search-btn"><Search size={18} /></button>
+        </form>
       </div>
     </nav>
   );

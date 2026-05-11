@@ -1,0 +1,124 @@
+.categories-page {
+  padding-bottom: 6rem;
+}
+
+.categories-loading {
+  height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: var(--text-muted);
+}
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.category-card-btn {
+  position: relative;
+  height: 240px;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.category-card-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  color: var(--text-main);
+  padding: 2rem;
+  width: 100%;
+}
+
+.category-icon-wrapper {
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.category-name {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0;
+  color: white;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  letter-spacing: -0.02em;
+}
+
+.category-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.category-card-btn:hover .category-action {
+  opacity: 1;
+  gap: 0.75rem;
+}
+
+.category-card-btn:hover .category-icon-wrapper {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.category-bg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--card-gradient);
+  opacity: 0.85;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+}
+
+.category-card-btn:hover .category-bg-overlay {
+  opacity: 1;
+}
+
+/* Glass effect for light mode */
+[data-theme='light'] .category-name,
+[data-theme='light'] .category-action {
+  /* color: white; still looks best on gradients */
+}
+
+@media (max-width: 640px) {
+  .categories-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-card-btn {
+    height: 180px;
+  }
+}

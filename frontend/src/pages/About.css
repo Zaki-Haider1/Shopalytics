@@ -1,0 +1,224 @@
+.about-page {
+  padding-bottom: 4rem;
+}
+
+/* Hero */
+.about-hero {
+  padding: 8rem 0 4rem;
+  background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 40%);
+}
+
+.about-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.about-subtitle {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Info Section */
+.project-info {
+  padding: 6rem 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.info-content h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-content p {
+  color: var(--text-muted);
+  line-height: 1.8;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.value-props {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.value-item {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.value-item h4 {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.value-item p {
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+.info-image {
+  position: relative;
+  border-radius: 2rem;
+  overflow: hidden;
+  height: 450px;
+}
+
+.info-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-overlay {
+  position: absolute;
+  bottom: 2rem;
+  left: 2rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-full);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* Mission Section */
+.mission-section {
+  padding: 6rem 0;
+  color: white;
+}
+
+.mission-section h2 {
+  font-size: 2.5rem;
+  margin-bottom: 4rem;
+}
+
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3rem;
+}
+
+.value-card {
+  padding: 2rem;
+}
+
+.value-card h3 {
+  font-size: 1.5rem;
+  margin: 1.5rem 0 1rem;
+}
+
+.value-card p {
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+/* Contact Section */
+.contact-section {
+  padding: 8rem 0;
+}
+
+.contact-wrapper {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  padding: 4rem;
+  border-radius: 3rem;
+  gap: 4rem;
+}
+
+.contact-info h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.contact-info > p {
+  color: var(--text-muted);
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+}
+
+.contact-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.method {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.method h4 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+}
+
+.method p {
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.contact-form-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-card {
+  padding: 3rem;
+  border-radius: 2rem;
+  text-align: center;
+  color: white;
+  box-shadow: var(--shadow-xl);
+}
+
+.form-card h3 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+}
+
+.form-card p {
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .info-grid, .contact-wrapper {
+    grid-template-columns: 1fr;
+    gap: 4rem;
+  }
+  
+  .values-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .info-image {
+    order: -1;
+    height: 350px;
+  }
+}
+
+@media (max-width: 640px) {
+  .about-title {
+    font-size: 2.5rem;
+  }
+  
+  .contact-wrapper {
+    padding: 2rem;
+  }
+}

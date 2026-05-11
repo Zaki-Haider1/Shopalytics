@@ -1,5 +1,40 @@
-.product-info-link {
-  display: block;
+.product-card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary);
+}
+
+.product-img-wrapper {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 1rem;
+  transition: transform 0.5s ease;
+}
+
+.product-card:hover .product-img {
+  transform: scale(1.08);
 }
 
 .product-actions {
@@ -12,6 +47,7 @@
   transform: translateX(20px);
   opacity: 0;
   transition: all 0.3s ease;
+  z-index: 5;
 }
 
 .product-card:hover .product-actions {
@@ -20,19 +56,90 @@
 }
 
 .action-btn {
-  background: var(--bg-surface);
+  background: var(--bg-surface-elevated);
   color: var(--text-main);
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-md);
   transition: all 0.2s ease;
+  border: 1px solid var(--border);
 }
 
 .action-btn:hover {
   background: var(--primary);
   color: white;
+  border-color: var(--primary);
+  transform: scale(1.1);
+}
+
+.product-info-link {
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-info {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.product-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--warning);
+}
+
+.star.empty {
+  color: var(--border);
+}
+
+.rating-value {
+  color: var(--text-muted);
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.views-count {
+  color: var(--text-muted);
+}
+
+.product-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 3rem;
+}
+
+.product-price {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-top: auto;
+}
+
+[data-theme='dark'] .product-img-wrapper {
+  background: rgba(255, 255, 255, 0.02);
 }

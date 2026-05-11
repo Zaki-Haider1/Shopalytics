@@ -9,8 +9,10 @@ import Checkout from './pages/Checkout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
+import About from './pages/About';
+import Categories from './pages/Categories';
 import Orders from './pages/Orders';
-import ChatbotWidget from './components/ChatbotWidget';
+
 import { CartProvider } from './context/CartContext';
 import './App.css';
 
@@ -41,10 +43,13 @@ function App() {
               <Route path="/orders" element={<Orders />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<About />} />
+              <Route path="/categories" element={<Categories />} />
               <Route path="/admin/*" element={<AdminDashboard />} />
             </Routes>
           </main>
-          <ChatbotWidget />
+
         </div>
       </Router>
     </CartProvider>

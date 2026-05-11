@@ -10,8 +10,10 @@ const Orders = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const data = await getOrders();
-        setOrders(data);
+        const res = await getOrders();
+        if (res.success) {
+          setOrders(res.orders);
+        }
       } catch (err) {
         console.error("Failed to fetch orders:", err);
       } finally {

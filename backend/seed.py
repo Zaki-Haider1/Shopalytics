@@ -76,6 +76,7 @@ for i in range(NUM_PRODUCTS):
         "_id": f"prod_{i+1:03d}",
         "name": random.choice(product_names[category]) + f" {fake.bothify('??-###')}",
         "category": category,
+        "description": fake.paragraph(nb_sentences=5),
         "price": price,
         "cost_price": round(price * random.uniform(0.5, 0.8), 2),
         "stock_quantity": random.randint(0, 500),

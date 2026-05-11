@@ -16,9 +16,15 @@ def get_products():
         for p in products:
             p["_id"] = str(p["_id"])
             
-        return jsonify(products), 200
+        return jsonify({
+            "success": True,
+            "products": products
+        }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 # ─── GET SINGLE PRODUCT ───────────────────────────────────────────
 @store_routes.route("/products/<product_id>", methods=["GET"])
@@ -38,9 +44,15 @@ def get_product(product_id):
             return jsonify({"error": "Product not found"}), 404
             
         product["_id"] = str(product["_id"])
-        return jsonify(product), 200
+        return jsonify({
+            "success": True,
+            "product": product
+        }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 # ─── GET CUSTOMER ORDERS ──────────────────────────────────────────
 @store_routes.route("/orders", methods=["GET"])
@@ -55,9 +67,15 @@ def get_orders():
             if "order_date" in o:
                 o["order_date"] = o["order_date"].strftime("%Y-%m-%d %H:%M")
                 
-        return jsonify(orders), 200
+        return jsonify({
+            "success": True,
+            "orders": orders
+        }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 # ─── PLACE ORDER (CHECKOUT) ───────────────────────────────────────
 @store_routes.route("/checkout", methods=["POST"])
@@ -87,3 +105,17 @@ def place_order():
     except Exception as e:
         print(f"Checkout Error: {e}")
         return jsonify({"error": str(e)}), 500
+
+@store_routes.route("/categories", methods=["GET"])
+def get_categories():
+    try:
+        categories = products_collection.distinct("category")
+        return jsonify({
+            "success": True,
+            "categories": categories
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500

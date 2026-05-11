@@ -1,0 +1,47 @@
+name: Shopalytics
+version: 1.0.0
+description: E-commerce analytics platform with a React frontend and Flask/MongoDB/MySQL backend.
+
+backend:
+  language: Python 3.x
+  package_manager: pip
+  dependencies:
+    - flask
+    - flask-cors
+    - pymongo
+    - mysql-connector-python
+    - pandas
+    - python-dotenv
+    - google-generativeai
+    - bcrypt
+
+frontend:
+  language: Node.js (React)
+  package_manager: npm
+  dependencies:
+    - axios
+    - framer-motion
+    - lucide-react
+    - react
+    - react-dom
+    - react-router-dom
+    - recharts
+    - web-vitals
+  dev_dependencies:
+    - @testing-library/dom
+    - @testing-library/jest-dom
+    - @testing-library/react
+    - @testing-library/user-event
+    - react-scripts
+
+infrastructure:
+  nosql_database:
+    name: MongoDB
+    version: 7.0
+    usage: Primary product and customer data storage
+  sql_database:
+    name: MySQL
+    usage: Data Warehouse (Star Schema) for analytics
+  orchestration:
+    - Docker
+    - Docker Compose

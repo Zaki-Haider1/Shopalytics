@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 import os
 import mysql.connector
 from dotenv import load_dotenv
+from db import products_collection
+from bson import ObjectId
 
 load_dotenv()
 
@@ -162,10 +164,13 @@ fact_orders (id, order_id, customer_id, product_id, region_id, date_id, quantity
         
         prompt = f"{schema_context}\n\nQuestion: {user_query}\n\nSQL Query:"
         response = model.generate_content(prompt)
-        sql_match = response.text.strip().replace("```sql", "").replace("```", "").strip()
         
+        # Clean SQL
+        sql_match = response.text.strip().replace("```sql", "").replace("```", "").strip()
         if sql_match.lower().startswith("sql"):
             sql_match = sql_match[3:].strip()
+            
+        print(f"DEBUG - Generated SQL: {sql_match}")
         
         # Run SQL
         conn = get_db()
@@ -175,21 +180,36 @@ fact_orders (id, order_id, customer_id, product_id, region_id, date_id, quantity
         cursor.close()
         conn.close()
 
+        # Handle JSON serialization (MySQL returns Decimals/Dates that jsonify hates)
+        from decimal import Decimal
+        from datetime import date, datetime
+        
+        def serialize(obj):
+            if isinstance(obj, Decimal): return float(obj)
+            if isinstance(obj, (date, datetime)): return obj.isoformat()
+            return obj
+
+        cleaned_results = []
+        for row in query_results:
+            cleaned_row = {k: serialize(v) for k, v in row.items()}
+            cleaned_results.append(cleaned_row)
+
         # Explain
-        explain_prompt = f"User asked: '{user_query}'. SQL result: {query_results}. Give a short, helpful answer."
+        explain_prompt = f"User asked: '{user_query}'. SQL result: {cleaned_results}. Give a short, helpful answer based on this data."
         explanation = model.generate_content(explain_prompt)
 
         return jsonify({
             "sql": sql_match,
-            "results": query_results,
+            "results": cleaned_results,
             "answer": explanation.text
         })
 
     except Exception as e:
+        print(f"DEBUG - AI Query Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-from db import products_collection
-from bson import ObjectId
 
 @admin_routes.route("/products", methods=["GET"])
 def get_admin_products():
@@ -199,19 +219,54 @@ def get_admin_products():
         p["_id"] = str(p["_id"]) # Convert ObjectId for JSON
     return jsonify(products)
 
+@admin_routes.route("/categories", methods=["GET"])
+def get_categories():
+    """Fetch unique product categories from MongoDB."""
+    categories = products_collection.distinct("category")
+    return jsonify(categories)
+
 @admin_routes.route("/products", methods=["POST"])
 def add_product():
-    """Add a new product to MongoDB."""
+    """Add a new product to MongoDB with the updated structure."""
     data = request.json
     if not data:
         return jsonify({"error": "No data provided"}), 400
     
-    # Auto-generate a readable product_id if not provided
-    if "product_id" not in data:
-        data["product_id"] = f"prod_{os.urandom(3).hex()}"
+    # Required fields validation
+    required_fields = ["name", "category", "price", "cost_price", "stock_quantity", "supplier_id"]
+    for field in required_fields:
+        if field not in data or not data[field]:
+            return jsonify({"error": f"Field '{field}' is required"}), 400
+
+    # Defaults and auto-generated fields
+    from datetime import datetime, timezone
+    import random
+    
+    # Auto-generate a readable _id if not provided (e.g., prod_123)
+    if "_id" not in data:
+        data["_id"] = f"prod_{random.randint(100, 999)}"
+        
+    # Ensure it's unique (basic check)
+    if products_collection.find_one({"_id": data["_id"]}):
+        data["_id"] = f"prod_{random.randint(1000, 9999)}"
+
+    # Default values
+    data["description"] = data.get("description", "")
+    data["ratings_avg"] = 0.0
+    data["views_count"] = 0
+    data["created_at"] = datetime.now(timezone.utc).isoformat()
+    data["images"] = data.get("images", [])
+
+    # Ensure types
+    try:
+        data["price"] = float(data["price"])
+        data["cost_price"] = float(data["cost_price"])
+        data["stock_quantity"] = int(data["stock_quantity"])
+    except ValueError:
+        return jsonify({"error": "Invalid numeric values provided"}), 400
         
     products_collection.insert_one(data)
-    return jsonify({"message": "Product added successfully", "product_id": data["product_id"]}), 201
+    return jsonify({"message": "Product added successfully", "_id": data["_id"]}), 201
 
 @admin_routes.route("/products/<id>", methods=["DELETE"])
 def delete_product(id):
@@ -233,3 +288,42 @@ def delete_product(id):
         pass
             
     return jsonify({"error": "Product not found in database"}), 404
+
+@admin_routes.route("/products/<id>", methods=["PUT"])
+def update_product(id):
+    data = request.json
+    if not data: return jsonify({"error": "No data"}), 400
+    update_data = {**data}
+    if "_id" in update_data: del update_data["_id"]
+    try:
+        if "price" in update_data: update_data["price"] = float(update_data["price"])
+        if "cost_price" in update_data: update_data["cost_price"] = float(update_data["cost_price"])
+        if "stock_quantity" in update_data: update_data["stock_quantity"] = int(update_data["stock_quantity"])
+    except ValueError: return jsonify({"error": "Invalid numbers"}), 400
+    
+    query_options = [{"_id": id}, {"product_id": id}]
+    try: query_options.append({"_id": ObjectId(id)})
+    except: pass
+    
+    for query in query_options:
+        result = products_collection.update_one(query, {"$set": update_data})
+        if result.matched_count > 0:
+            return jsonify({"message": "Updated"}), 200
+    return jsonify({"error": "Not found"}), 404
+
+@admin_routes.route("/products/<id>/stock", methods=["PATCH"])
+def patch_stock(id):
+    """Increment or decrement product stock quantity."""
+    data = request.json
+    change = data.get("stock_change", 0)
+    
+    query_options = [{"_id": id}, {"product_id": id}]
+    try: query_options.append({"_id": ObjectId(id)})
+    except: pass
+    
+    for query in query_options:
+        result = products_collection.update_one(query, {"$inc": {"stock_quantity": change}})
+        if result.matched_count > 0:
+            return jsonify({"message": "Stock updated successfully"}), 200
+            
+    return jsonify({"error": "Product not found"}), 404

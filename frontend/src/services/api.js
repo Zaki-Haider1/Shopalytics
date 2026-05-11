@@ -61,11 +61,25 @@ export const getOrders = async () => {
   return res.json();
 };
 
-export const updateProduct = async (product) => {
-  const res = await fetch(`${BASE_URL}/api/admin/products/update`, {
+export const updateProduct = async (id, product) => {
+  const res = await fetch(`${BASE_URL}/api/admin/products/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(product),
   });
+  return res.json();
+};
+
+export const patchProductStock = async (id, change) => {
+  const res = await fetch(`${BASE_URL}/api/admin/products/${id}/stock`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stock_change: change }),
+  });
+  return res.json();
+};
+
+export const getCategories = async () => {
+  const res = await fetch(`${BASE_URL}/api/store/categories`);
   return res.json();
 };

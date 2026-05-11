@@ -15,6 +15,8 @@ import {
   Trash2,
   PlusCircle,
   X,
+  Plus,
+  Minus,
   Image as ImageIcon
 } from "lucide-react";
 
@@ -301,15 +303,30 @@ const AddProduct = () => {
   const [formData, setFormData] = useState({
     name: "",
     category: "",
-    brand: "",
     price: "",
-    stock: "50", // Default stock to 50
+    cost_price: "",
+    stock_quantity: "50",
+    supplier_id: "",
     description: "",
-    images: [] // Array of Base64 strings
+    images: []
   });
+  const [categories, setCategories] = useState([]);
+  const [isNewCategory, setIsNewCategory] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Helper to convert file to Base64 string
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/categories`);
+      setCategories(res.data);
+    } catch (err) {
+      console.error("Error fetching categories", err);
+    }
+  };
+
   const convertToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -322,7 +339,6 @@ const AddProduct = () => {
   const handleFileChange = async (e, index) => {
     const file = e.target.files[0];
     if (!file) return;
-
     try {
       const base64 = await convertToBase64(file);
       const newImages = [...formData.images];
@@ -344,21 +360,29 @@ const AddProduct = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.images.length === 0) {
-      alert("Please add at least one image");
-      return;
-    }
     setLoading(true);
     try {
       await axios.post(`${API_BASE}/products`, {
         ...formData,
         price: parseFloat(formData.price),
-        stock: parseInt(formData.stock) || 0
+        cost_price: parseFloat(formData.cost_price),
+        stock_quantity: parseInt(formData.stock_quantity) || 0
       });
       alert("Product added successfully!");
-      setFormData({ name: "", category: "", brand: "", price: "", stock: "50", description: "", images: [] });
+      setFormData({
+        name: "",
+        category: "",
+        price: "",
+        cost_price: "",
+        stock_quantity: "50",
+        supplier_id: "",
+        description: "",
+        images: []
+      });
+      setIsNewCategory(false);
+      fetchCategories();
     } catch (err) {
-      alert("Error adding product");
+      alert(err.response?.data?.error || "Error adding product");
     } finally {
       setLoading(false);
     }
@@ -369,62 +393,100 @@ const AddProduct = () => {
       <div className="admin-header-flex">
         <div>
           <h2 className="admin-page-title">Add New Product</h2>
-          <p className="admin-page-subtitle">Upload local images directly to your database</p>
+          <p className="admin-page-subtitle">Configure inventory and analytical metadata</p>
         </div>
       </div>
 
-      <div className="glass-card" style={{padding: '2.5rem', maxWidth: '800px', marginTop: '1.5rem'}}>
+      <div className="glass-card" style={{padding: '2.5rem', maxWidth: '850px', marginTop: '1.5rem'}}>
         <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
           
           <div className="form-section">
-            <h4 style={{marginBottom: '1rem', color: 'var(--admin-accent)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px'}}>Basic Information</h4>
+            <h4 style={{marginBottom: '1rem', color: 'var(--admin-accent)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px'}}>Essential Information</h4>
             <div style={{display: 'flex', flexDirection: 'column', gap: '1.2rem'}}>
-              <div className="form-group">
-                <label>Product Name</label>
-                <input 
-                  type="text" className="table-input" required placeholder="e.g. Premium Wireless Headphones"
-                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
               
               <div style={{display: 'flex', gap: '1rem'}}>
-                <div className="form-group" style={{flex: 1}}>
-                  <label>Category</label>
+                <div className="form-group" style={{flex: 2}}>
+                  <label>Product Name <span style={{color: 'red'}}>*</span></label>
                   <input 
-                    type="text" className="table-input" required placeholder="Electronics"
-                    value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}
+                    type="text" className="table-input" required placeholder="e.g. Headphones UU-114"
+                    value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
                   />
                 </div>
                 <div className="form-group" style={{flex: 1}}>
-                  <label>Brand</label>
+                  <label>Supplier ID <span style={{color: 'red'}}>*</span></label>
                   <input 
-                    type="text" className="table-input" required placeholder="Sony"
-                    value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})}
+                    type="text" className="table-input" required placeholder="sup_025"
+                    value={formData.supplier_id} onChange={e => setFormData({...formData, supplier_id: e.target.value})}
                   />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Category <span style={{color: 'red'}}>*</span></label>
+                <div style={{display: 'flex', gap: '0.5rem'}}>
+                  {!isNewCategory ? (
+                    <>
+                      <select 
+                        className="table-input" required
+                        value={formData.category} 
+                        onChange={e => {
+                          if (e.target.value === "ADD_NEW") {
+                            setIsNewCategory(true);
+                            setFormData({...formData, category: ""});
+                          } else {
+                            setFormData({...formData, category: e.target.value});
+                          }
+                        }}
+                      >
+                        <option value="">Select a Category</option>
+                        {categories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                        <option value="ADD_NEW" style={{fontWeight: 'bold', color: 'var(--admin-accent)'}}>+ Add New Category</option>
+                      </select>
+                    </>
+                  ) : (
+                    <>
+                      <input 
+                        type="text" className="table-input" required placeholder="Enter new category name"
+                        value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}
+                      />
+                      <button type="button" className="btn-sync" style={{padding: '5px 12px'}} onClick={() => setIsNewCategory(false)}>
+                        <X size={14} />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div style={{display: 'flex', gap: '1rem'}}>
                 <div className="form-group" style={{flex: 1}}>
-                  <label>Price ($)</label>
+                  <label>Selling Price ($) <span style={{color: 'red'}}>*</span></label>
                   <input 
-                    type="number" step="0.01" className="table-input" required placeholder="299.99"
+                    type="number" step="0.01" className="table-input" required placeholder="0.00"
                     value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})}
                   />
                 </div>
                 <div className="form-group" style={{flex: 1}}>
-                  <label>Stock Quantity</label>
+                  <label>Cost Price ($) <span style={{color: 'red'}}>*</span></label>
+                  <input 
+                    type="number" step="0.01" className="table-input" required placeholder="0.00"
+                    value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})}
+                  />
+                </div>
+                <div className="form-group" style={{flex: 1}}>
+                  <label>Stock Quantity <span style={{color: 'red'}}>*</span></label>
                   <input 
                     type="number" className="table-input" required placeholder="50"
-                    value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})}
+                    value={formData.stock_quantity} onChange={e => setFormData({...formData, stock_quantity: e.target.value})}
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Description</label>
+                <label>Description (Optional)</label>
                 <textarea 
-                  className="table-input" rows="4" placeholder="Tell customers about this product..."
+                  className="table-input" rows="3" placeholder="Description of the product..."
                   style={{padding: '0.8rem', resize: 'vertical'}}
                   value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}
                 ></textarea>
@@ -434,7 +496,7 @@ const AddProduct = () => {
 
           <div className="form-section">
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-              <h4 style={{margin: 0, color: 'var(--admin-accent)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px'}}>Product Gallery (Stored as Bytes)</h4>
+              <h4 style={{margin: 0, color: 'var(--admin-accent)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px'}}>Product Gallery</h4>
               <button type="button" onClick={addImageField} className="btn-sync" style={{padding: '5px 12px', fontSize: '0.8rem'}}>
                 <PlusCircle size={14} /> Add Image Slot
               </button>
@@ -464,13 +526,13 @@ const AddProduct = () => {
                 </div>
               ))}
               {formData.images.length === 0 && (
-                <p style={{fontSize: '0.85rem', color: 'var(--admin-text-sub)', textAlign: 'center'}}>Click "Add Image Slot" to upload pictures.</p>
+                <p style={{fontSize: '0.85rem', color: 'var(--admin-text-sub)', textAlign: 'center'}}>Add images to showcase your product.</p>
               )}
             </div>
           </div>
 
           <button className="btn-sync" style={{padding: '1rem', fontSize: '1rem', marginTop: '1rem'}} disabled={loading}>
-            {loading ? 'Processing Images...' : 'Publish Product with Local Images'}
+            {loading ? 'Processing...' : 'Add Product to Inventory'}
           </button>
         </form>
       </div>
@@ -479,11 +541,132 @@ const AddProduct = () => {
 };
 
 /* ─────────────────────────────
-   PRODUCTS MANAGEMENT
+   PRODUCTS MANAGEMENT 
 ───────────────────────────── */
+const EditProductModal = ({ product, onClose, onUpdate }) => {
+  const [formData, setFormData] = useState({ ...product });
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/categories`).then(res => setCategories(res.data));
+  }, []);
+
+  const handleFileChange = async (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const newImages = [...(formData.images || [])];
+      newImages[index] = reader.result;
+      setFormData({ ...formData, images: newImages });
+    };
+  };
+
+  const addImageField = () => {
+    setFormData({ ...formData, images: [...(formData.images || []), ""] });
+  };
+
+  const removeImageField = (index) => {
+    const newImages = formData.images.filter((_, i) => i !== index);
+    setFormData({ ...formData, images: newImages });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await axios.put(`${API_BASE}/products/${product._id || product.product_id}`, {
+        ...formData,
+        price: parseFloat(formData.price),
+        cost_price: parseFloat(formData.cost_price),
+        stock_quantity: parseInt(formData.stock_quantity) || 0
+      });
+      alert("Product updated!");
+      onUpdate();
+      onClose();
+    } catch (err) {
+      alert("Update failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="admin-modal-overlay">
+      <div className="admin-modal glass-card">
+        <div className="modal-header">
+          <h3>Edit Product: {product.name}</h3>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="modal-form">
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Name</label>
+              <input type="text" className="table-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+            </div>
+            <div className="form-group">
+              <label>Category</label>
+              <select className="table-input" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required>
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Price</label>
+              <input type="number" className="table-input" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required />
+            </div>
+            <div className="form-group">
+              <label>Cost Price</label>
+              <input type="number" className="table-input" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} required />
+            </div>
+            <div className="form-group">
+              <label>Stock</label>
+              <input type="number" className="table-input" value={formData.stock_quantity} onChange={e => setFormData({...formData, stock_quantity: e.target.value})} required />
+            </div>
+            <div className="form-group">
+              <label>Supplier ID</label>
+              <input type="text" className="table-input" value={formData.supplier_id} onChange={e => setFormData({...formData, supplier_id: e.target.value})} required />
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Description</label>
+            <textarea className="table-input" rows="2" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}></textarea>
+          </div>
+
+          <div className="modal-gallery">
+            <div className="gallery-header">
+              <label>Images</label>
+              <button type="button" onClick={addImageField} className="text-btn">+ Add</button>
+            </div>
+            <div className="gallery-grid">
+              {(formData.images || []).map((img, i) => (
+                <div key={i} className="gallery-item">
+                  {img && <img src={img} alt="preview" />}
+                  <input type="file" onChange={e => handleFileChange(e, i)} />
+                  <button type="button" onClick={() => removeImageField(i)} className="del-img"><Trash2 size={14} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="btn-cancel">Cancel</button>
+            <button type="submit" className="btn-sync" disabled={loading}>{loading ? 'Updating...' : 'Save Changes'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  const [editingProduct, setEditingProduct] = useState(null);
 
   const fetchProducts = () => {
     axios.get(`${API_BASE}/products`)
@@ -498,43 +681,116 @@ const Products = () => {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    if (!window.confirm("Delete this product?")) return;
     try {
       await axios.delete(`${API_BASE}/products/${id}`);
-      // Remove from UI by checking both ID types
       setProducts(products.filter(p => p.product_id !== id && p._id !== id));
     } catch (err) {
-      alert("Failed to delete product");
+      alert("Delete failed");
     }
   };
 
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const handleStockUpdate = async (id, change) => {
+    try {
+      await axios.patch(`${API_BASE}/products/${id}/stock`, { stock_change: change });
+      // Update local state for immediate feedback
+      setProducts(products.map(p => {
+        if (p._id === id || p.product_id === id) {
+          const currentStock = p.stock_quantity || p.stock || 0;
+          return { ...p, stock_quantity: currentStock + change };
+        }
+        return p;
+      }));
+    } catch (err) {
+      alert("Stock update failed");
+    }
+  };
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.supplier_id && p.supplier_id.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    let aVal = a[sortConfig.key];
+    let bVal = b[sortConfig.key];
+    
+    // Handle numeric fields
+    if (['price', 'stock_quantity', 'stock'].includes(sortConfig.key)) {
+      aVal = parseFloat(aVal || 0);
+      bVal = parseFloat(bVal || 0);
+    } else {
+      aVal = String(aVal || "").toLowerCase();
+      bVal = String(bVal || "").toLowerCase();
+    }
+
+    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
     <div className="admin-content-inner">
-      <h2 className="admin-page-title">Manage Inventory</h2>
+      <div className="admin-header-flex">
+        <div>
+          <h2 className="admin-page-title">Manage Inventory</h2>
+          <p className="admin-page-subtitle">Search, sort and edit your products</p>
+        </div>
+        <div className="search-wrapper">
+          <input 
+            type="text" 
+            className="table-input" 
+            placeholder="Search name, category, supplier..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
       <div className="table-container">
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Brand</th>
+              <th onClick={() => handleSort('name')} className="sortable">Name {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+              <th onClick={() => handleSort('category')} className="sortable">Category {sortConfig.key === 'category' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+              <th onClick={() => handleSort('price')} className="sortable">Price {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+              <th onClick={() => handleSort('stock_quantity')} className="sortable">Stock {sortConfig.key === 'stock_quantity' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+              <th onClick={() => handleSort('supplier_id')} className="sortable">Supplier {sortConfig.key === 'supplier_id' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {products.map(p => (
+            {sortedProducts.map(p => (
               <tr key={p._id || p.product_id}>
                 <td>{p.name}</td>
                 <td>{p.category}</td>
                 <td>${p.price}</td>
-                <td>{p.brand}</td>
                 <td>
-                  <button 
-                    onClick={() => handleDelete(p.product_id || p._id)}
-                    style={{background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px'}}
-                    title="Delete Product"
-                  >
+                  <div className="stock-adjustment">
+                    <button onClick={() => handleStockUpdate(p._id || p.product_id, -1)} className="stock-btn sub" title="Subtract 1">
+                      <Minus size={14} />
+                    </button>
+                    <span className="stock-value">{p.stock_quantity || p.stock || 0}</span>
+                    <button onClick={() => handleStockUpdate(p._id || p.product_id, 1)} className="stock-btn add" title="Add 1">
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </td>
+                <td>{p.supplier_id || "N/A"}</td>
+                <td className="table-actions">
+                  <button onClick={() => setEditingProduct(p)} className="edit-btn" title="Edit Product">
+                    <Layers size={18} />
+                  </button>
+                  <button onClick={() => handleDelete(p.product_id || p._id)} className="delete-btn" title="Delete Product">
                     <Trash2 size={18} />
                   </button>
                 </td>
@@ -542,8 +798,16 @@ const Products = () => {
             ))}
           </tbody>
         </table>
-        {products.length === 0 && !loading && <div className="no-data-msg">No products found in inventory.</div>}
+        {sortedProducts.length === 0 && !loading && <div className="no-data-msg">No products match your search.</div>}
       </div>
+
+      {editingProduct && (
+        <EditProductModal 
+          product={editingProduct} 
+          onClose={() => setEditingProduct(null)} 
+          onUpdate={fetchProducts} 
+        />
+      )}
     </div>
   );
 };
