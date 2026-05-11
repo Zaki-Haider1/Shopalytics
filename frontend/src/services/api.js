@@ -24,8 +24,8 @@ export const loginUser = async (formData) => {
   return res.json();
 };
 
-export const getAdminData = async () => {
-  const res = await fetch(`${BASE_URL}/api/admin/dashboard`);
+export const getAdminData = async (range = "7d") => {
+  const res = await fetch(`${BASE_URL}/api/admin/dashboard?range=${range}`);
   return res.json();
 };
 

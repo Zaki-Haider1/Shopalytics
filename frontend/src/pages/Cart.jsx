@@ -27,9 +27,9 @@ const Cart = () => {
                     <p className="cart-item-price">Rs. {item.price.toFixed(2)}</p>
                   </div>
                   <div className="quantity-selector">
-                    <button onClick={() => updateQuantity(item._id || item.id, item.quantity - 1)}>-</button>
+                    <button onClick={() => updateQuantity(item._id || item.id, item.quantity - 1, item.stock_quantity)}>-</button>
                     <span>{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item._id || item.id, item.quantity + 1)}>+</button>
+                    <button onClick={() => updateQuantity(item._id || item.id, item.quantity + 1, item.stock_quantity)}>+</button>
                   </div>
                   <div className="cart-item-total">
                     Rs. {(item.price * item.quantity).toFixed(2)}

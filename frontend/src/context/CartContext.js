@@ -52,17 +52,25 @@ export const CartProvider = ({ children }) => {
     }
   }, [cart, user]);
 
-  const addToCart = (product) => {
+  const addToCart = (product, quantity = 1) => {
     setCart((prevCart) => {
       const productId = product._id || product.id;
       const existingItem = prevCart.find((item) => (item._id || item.id) === productId);
       
+      const currentQty = existingItem ? existingItem.quantity : 0;
+      const stock = product.stock_quantity ?? product.stock ?? 0;
+
+      if (currentQty + quantity > stock) {
+        alert(`Only ${stock} items available in stock. You already have ${currentQty} in cart.`);
+        return prevCart;
+      }
+
       if (existingItem) {
         return prevCart.map((item) =>
-          (item._id || item.id) === productId ? { ...item, quantity: item.quantity + 1 } : item
+          (item._id || item.id) === productId ? { ...item, quantity: item.quantity + quantity } : item
         );
       }
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prevCart, { ...product, quantity }];
     });
   };
 
@@ -70,8 +78,12 @@ export const CartProvider = ({ children }) => {
     setCart((prevCart) => prevCart.filter((item) => (item._id || item.id) !== productId));
   };
 
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = (productId, quantity, stock) => {
     if (quantity < 1) return;
+    if (quantity > stock) {
+      alert(`Only ${stock} items available in stock.`);
+      return;
+    }
     setCart((prevCart) =>
       prevCart.map((item) =>
         (item._id || item.id) === productId ? { ...item, quantity } : item

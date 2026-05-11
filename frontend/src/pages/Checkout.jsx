@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CreditCard, Truck, CheckCircle, Package, User, Mail, Phone, MapPin, Globe } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { placeOrder, getUserInfo } from '../services/api';
+import { placeOrder, getUserInfo, patchProductStock } from '../services/api';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -82,11 +82,18 @@ const Checkout = () => {
       const response = await placeOrder(orderData);
       
       if (response.success) {
+        // Update stock for each item
+        try {
+          await Promise.all(cart.map(item => 
+            patchProductStock(item._id || item.id, -item.quantity)
+          ));
+        } catch (stockErr) {
+          console.error("Failed to update stock after order:", stockErr);
+          // We still show success since the order itself went through
+        }
+
         setStep(3);
         clearCart();
-        setTimeout(() => {
-          navigate('/orders');
-        }, 5000);
       } else {
         alert(response.message || "Failed to place order");
       }

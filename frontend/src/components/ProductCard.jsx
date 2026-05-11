@@ -28,6 +28,10 @@ const ProductCard = ({ product, index }) => {
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
+    if ((product.stock_quantity ?? product.stock ?? 0) <= 0) {
+      alert("Sorry, this item is out of stock.");
+      return;
+    }
     addToCart(product);
     alert(`${product.name} added to cart!`);
   };
@@ -61,7 +65,12 @@ const ProductCard = ({ product, index }) => {
       <div className="product-img-wrapper">
         <img src={productImage} alt={product.name} className="product-img" />
         <div className="product-actions">
-          <button className="action-btn" title="Add to Cart" onClick={handleAddToCart}>
+          <button 
+            className={`action-btn ${(product.stock_quantity ?? product.stock ?? 0) <= 0 ? 'disabled' : ''}`} 
+            title={(product.stock_quantity ?? product.stock ?? 0) > 0 ? "Add to Cart" : "Out of Stock"} 
+            onClick={handleAddToCart}
+            disabled={(product.stock_quantity ?? product.stock ?? 0) <= 0}
+          >
             <ShoppingCart size={18} />
           </button>
           <button className="action-btn" title="View Details" onClick={handleCardClick}>

@@ -35,29 +35,51 @@ const API_BASE = "http://localhost:5000/api/admin";
 ───────────────────────────── */
 const Dashboard = () => {
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const [timeRange, setTimeRange] = useState("7d");
 
-  const fetchDashboardData = () => {
-    axios.get(`${API_BASE}/dashboard`)
-      .then(res => setData(res.data));
+  const fetchDashboardData = (range) => {
+    setError(null);
+    axios.get(`${API_BASE}/dashboard?range=${range}`)
+      .then(res => {
+        if (res.data.error) setError(res.data.error);
+        else setData(res.data);
+      })
+      .catch(err => {
+        setError("Failed to fetch dashboard data. Check backend logs.");
+        console.error(err);
+      });
   };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    fetchDashboardData(timeRange);
+  }, [timeRange]);
 
   const handleSync = async () => {
     setSyncing(true);
     try {
       await axios.post(`${API_BASE}/sync`);
       alert("Warehouse synchronized!");
-      fetchDashboardData();
+      fetchDashboardData(timeRange);
     } catch (err) {
       alert("Sync failed");
     } finally {
       setSyncing(false);
     }
   };
+
+  if (error) return (
+    <div className="admin-loading">
+      <div style={{color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2rem', borderRadius: '12px', textAlign: 'center'}}>
+        <h3 style={{margin: '0 0 0.5rem 0'}}>Dashboard Error</h3>
+        <p style={{margin: 0}}>{error}</p>
+        <button onClick={() => fetchDashboardData(timeRange)} className="btn-sync" style={{marginTop: '1.5rem', marginInline: 'auto'}}>
+          <RefreshCw size={18} /> Retry
+        </button>
+      </div>
+    </div>
+  );
 
   if (!data) return <div className="admin-loading">Loading Dashboard...</div>;
 
@@ -68,9 +90,22 @@ const Dashboard = () => {
           <h2 className="admin-page-title">Dashboard</h2>
           <p className="admin-page-subtitle">Overview of your store performance</p>
         </div>
-        <button className={`btn-sync ${syncing ? 'spinning' : ''}`} onClick={handleSync}>
-          <RefreshCw size={18} /> Sync Data
-        </button>
+        <div className="header-actions">
+          <select 
+            className="table-input range-selector" 
+            value={timeRange} 
+            onChange={(e) => setTimeRange(e.target.value)}
+          >
+            <option value="7d">Last 7 Days</option>
+            <option value="1m">Last Month</option>
+            <option value="4m">Last 4 Months</option>
+            <option value="1y">Last Year</option>
+            <option value="all">All Time</option>
+          </select>
+          <button className={`btn-sync ${syncing ? 'spinning' : ''}`} onClick={handleSync}>
+            <RefreshCw size={18} /> Sync Data
+          </button>
+        </div>
       </div>
 
       <div className="stats-grid">
@@ -107,14 +142,28 @@ const Dashboard = () => {
                   dataKey="date" 
                   stroke="var(--admin-text-sub)" 
                   fontSize={10} 
+                  padding={{ left: 10, right: 10 }}
                   tickFormatter={(str) => {
                     const date = new Date(str);
+                    if (timeRange === "1y" || timeRange === "all") {
+                      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                    }
                     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                   }}
                 />
-                <YAxis stroke="var(--admin-text-sub)" fontSize={12} />
-                <Tooltip labelFormatter={(label) => new Date(label).toLocaleDateString()} />
-                <Line type="monotone" dataKey="total_revenue" stroke="var(--admin-accent)" strokeWidth={3} dot={false} />
+                <YAxis stroke="var(--admin-text-sub)" fontSize={12} tickFormatter={(val) => `Rs.${val.toLocaleString()}`} />
+                <Tooltip 
+                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                  formatter={(value) => [`Rs. ${value.toLocaleString()}`, 'Revenue']}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="total_revenue" 
+                  stroke="var(--admin-accent)" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: 'var(--admin-accent)', strokeWidth: 2, stroke: 'var(--admin-card)' }} 
+                  activeDot={{ r: 6, strokeWidth: 0 }} 
+                />
               </LineChart>
             </ResponsiveContainer>
             {(!data.daily_metrics || data.daily_metrics.length === 0) && <div className="no-data-overlay">No sales data yet. Click 'Sync'!</div>}

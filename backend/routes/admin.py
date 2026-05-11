@@ -20,54 +20,140 @@ def get_db():
 
 @admin_routes.route("/dashboard")
 def dashboard():
+    time_range = request.args.get("range", "7d") 
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
-    # 1. KPI Stats
-    cursor.execute("SELECT SUM(subtotal) as total_revenue, COUNT(*) as total_orders FROM fact_orders")
-    stats = cursor.fetchone()
-    
-    cursor.execute("SELECT COUNT(*) as total_users FROM dim_customers")
-    user_count = cursor.fetchone()
+    try:
+        # Date Filter logic
+        date_filter = ""
+        if time_range == "7d":
+            date_filter = "WHERE d.full_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+        elif time_range == "1m":
+            date_filter = "WHERE d.full_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)"
+        elif time_range == "4m":
+            date_filter = "WHERE d.full_date >= DATE_SUB(CURDATE(), INTERVAL 4 MONTH)"
+        elif time_range == "1y":
+            date_filter = "WHERE d.full_date >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)"
+        
+        # 1. KPI Stats
+        cursor.execute(f"""
+            SELECT SUM(fo.subtotal) as total_revenue, COUNT(fo.id) as total_orders 
+            FROM fact_orders fo
+            JOIN dim_date d ON fo.date_id = d.date_id
+            {date_filter}
+        """)
+        stats = cursor.fetchone()
+        
+        cursor.execute("SELECT COUNT(*) as total_users FROM dim_customers")
+        user_count = cursor.fetchone()
 
-    cursor.execute("SELECT COUNT(*) as total_products FROM dim_products")
-    product_count = cursor.fetchone()
-    
-    # 2. Revenue Performance (Line Chart)
-    cursor.execute("""
-        SELECT d.full_date as date, SUM(fo.subtotal) as total_revenue 
-        FROM fact_orders fo 
-        JOIN dim_date d ON fo.date_id = d.date_id 
-        GROUP BY d.full_date 
-        ORDER BY d.full_date ASC
-    """)
-    daily_metrics = cursor.fetchall()
+        cursor.execute("SELECT COUNT(*) as total_products FROM dim_products")
+        product_count = cursor.fetchone()
+        
+        # 2. Revenue Performance (Line Chart)
+        if time_range in ["1y", "all"]:
+            query = f"""
+                SELECT DATE_FORMAT(d.full_date, '%Y-%m-01') as date, SUM(fo.subtotal) as total_revenue 
+                FROM fact_orders fo 
+                JOIN dim_date d ON fo.date_id = d.date_id 
+                {date_filter}
+                GROUP BY date
+                ORDER BY date ASC
+            """
+        else:
+            query = f"""
+                SELECT d.full_date as date, SUM(fo.subtotal) as total_revenue 
+                FROM fact_orders fo 
+                JOIN dim_date d ON fo.date_id = d.date_id 
+                {date_filter}
+                GROUP BY d.full_date 
+                ORDER BY d.full_date ASC
+            """
+        cursor.execute(query)
+        daily_metrics = cursor.fetchall()
 
-    # 3. Product Performance (Leaderboard)
-    cursor.execute("""
-        SELECT p.name, SUM(fo.quantity) as total_sales, SUM(fo.subtotal) as total_revenue
-        FROM fact_orders fo
-        JOIN dim_products p ON fo.product_id = p.product_id
-        GROUP BY p.name
-        ORDER BY total_revenue DESC
-        LIMIT 5
-    """)
-    product_performance = cursor.fetchall()
+        # Fill missing dates for better chart continuity
+        from datetime import date, timedelta
+        import calendar
 
-    cursor.close()
-    db.close()
+        processed_metrics = []
+        data_map = {str(m['date']): float(m['total_revenue'] or 0) for m in daily_metrics}
 
-    return jsonify({
-        "stats": {
-            "total_revenue": float(stats['total_revenue'] or 0),
-            "total_orders": stats['total_orders'] or 0,
-            "total_users": user_count['total_users'] or 0,
-            "total_products": product_count['total_products'] or 0,
-            "total_profit": float(stats['total_revenue'] or 0) * 0.25 # Mock profit
-        },
-        "daily_metrics": daily_metrics,
-        "product_performance": product_performance
-    })
+        if time_range in ["7d", "1m", "4m"]:
+            days_limit = {"7d": 7, "1m": 30, "4m": 120}[time_range]
+            end_date = date.today()
+            start_date = end_date - timedelta(days=days_limit-1)
+            
+            current = start_date
+            while current <= end_date:
+                d_str = str(current)
+                processed_metrics.append({
+                    "date": d_str,
+                    "total_revenue": data_map.get(d_str, 0.0)
+                })
+                current += timedelta(days=1)
+        
+        elif time_range == "1y":
+            # Last 12 months
+            end_date = date.today().replace(day=1)
+            months = []
+            for i in range(12):
+                m = (end_date.month - i - 1) % 12 + 1
+                y = end_date.year + (end_date.month - i - 1) // 12
+                months.append(date(y, m, 1))
+            months.sort()
+            
+            for m_date in months:
+                d_str = str(m_date)
+                processed_metrics.append({
+                    "date": d_str,
+                    "total_revenue": data_map.get(d_str, 0.0)
+                })
+        else:
+            # For "all", just use the existing points as they might span years
+            processed_metrics = [{
+                "date": str(m['date']),
+                "total_revenue": float(m['total_revenue'] or 0)
+            } for m in daily_metrics]
+
+        # 3. Product Performance (Leaderboard)
+        cursor.execute(f"""
+            SELECT p.name, SUM(fo.quantity) as total_sales, SUM(fo.subtotal) as total_revenue
+            FROM fact_orders fo
+            JOIN dim_products p ON fo.product_id = p.product_id
+            JOIN dim_date d ON fo.date_id = d.date_id
+            {date_filter}
+            GROUP BY p.name
+            ORDER BY total_revenue DESC
+            LIMIT 5
+        """)
+        product_performance = cursor.fetchall()
+
+        cursor.close()
+        db.close()
+
+        # Ensure all types are JSON serializable
+        return jsonify({
+            "stats": {
+                "total_revenue": float(stats['total_revenue'] or 0),
+                "total_orders": int(stats['total_orders'] or 0),
+                "total_users": int(user_count['total_users'] or 0),
+                "total_products": int(product_count['total_products'] or 0),
+                "total_profit": float(stats['total_revenue'] or 0) * 0.25
+            },
+            "daily_metrics": processed_metrics,
+            "product_performance": [{
+                "name": p['name'],
+                "total_sales": int(p['total_sales'] or 0),
+                "total_revenue": float(p['total_revenue'] or 0)
+            } for p in product_performance]
+        })
+    except Exception as e:
+        if cursor: cursor.close()
+        if db: db.close()
+        print(f"Dashboard Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @admin_routes.route("/analytics")
 def analytics():

@@ -42,10 +42,17 @@ const ProductDetails = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    // Add to cart multiple times based on quantity
-    for (let i = 0; i < quantity; i++) {
-      addToCart(product);
+    
+    const productId = product._id || product.id;
+    const existingItem = (JSON.parse(localStorage.getItem('cart')) || []).find(item => (item._id || item.id) === productId);
+    const currentInCart = existingItem ? existingItem.quantity : 0;
+    
+    if (currentInCart + quantity > product.stock_quantity) {
+      alert(`Cannot add ${quantity} more items. Only ${product.stock_quantity} total available and you have ${currentInCart} in cart.`);
+      return;
     }
+
+    addToCart(product, quantity);
     alert(`${quantity} ${product.name} added to cart!`);
   };
 
@@ -115,13 +122,11 @@ const ProductDetails = () => {
             <h1 className="detail-title">{product.name}</h1>
             <div className="product-price">
             <span className="current-price">Rs. {product.price.toFixed(2)}</span>
-            <span className="old-price">Rs. {(product.price * 1.2).toFixed(2)}</span>
           </div>
             <div className="detail-rating">
               <Star className="star-icon filled" size={18} />
               <span className="review-count">({product.ratings_avg || 0})</span>
             </div>
-            <div className="detail-price">Rs.{(product.price || 0).toLocaleString()}</div>
             <div className={`stock-status ${(product.stock_quantity > 0) ? 'in-stock' : 'out-of-stock'}`}>
               {(product.stock_quantity > 0) ? `In Stock (${product.stock_quantity})` : 'Out of Stock'}
             </div>
@@ -138,10 +143,12 @@ const ProductDetails = () => {
               <button onClick={() => setQuantity(quantity + 1)}>+</button>
             </div>
             <button 
-              className="btn-primary add-cart-large flex items-center justify-center"
+              className={`btn-primary add-cart-large flex items-center justify-center ${product.stock_quantity <= 0 ? 'disabled' : ''}`}
               onClick={handleAddToCart}
+              disabled={product.stock_quantity <= 0}
             >
-              <ShoppingCart size={20} className="mr-2" /> Add to Cart
+              <ShoppingCart size={20} className="mr-2" /> 
+              {product.stock_quantity > 0 ? 'Add to Cart' : 'Out of Stock'}
             </button>
           </div>
 
