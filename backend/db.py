@@ -21,7 +21,7 @@ db = client[MONGODB_DB]
 # ─── Collections ────────────────────────────────────────────
 
 # Users (customers)
-users_collection = db["users"]
+users_collection = db["customers"]
 
 # Future collections (prepare now so structure stays consistent)
 products_collection = db["products"]

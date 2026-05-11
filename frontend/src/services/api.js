@@ -56,8 +56,9 @@ export const placeOrder = async (orderData) => {
   return res.json();
 };
 
-export const getOrders = async () => {
-  const res = await fetch(`${BASE_URL}/api/store/orders`);
+export const getOrders = async (userId) => {
+  const url = userId ? `${BASE_URL}/api/store/orders?customer_id=${userId}` : `${BASE_URL}/api/store/orders`;
+  const res = await fetch(url);
   return res.json();
 };
 
@@ -81,5 +82,26 @@ export const patchProductStock = async (id, change) => {
 
 export const getCategories = async () => {
   const res = await fetch(`${BASE_URL}/api/store/categories`);
+  return res.json();
+};
+
+export const getCart = async (userId) => {
+  const res = await fetch(`${BASE_URL}/api/store/cart/${userId}`);
+  return res.json();
+};
+
+export const updateCart = async (userId, cart) => {
+  const res = await fetch(`${BASE_URL}/api/store/cart/${userId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ cart }),
+  });
+  return res.json();
+};
+
+export const getUserInfo = async (userId) => {
+  const res = await fetch(`${BASE_URL}/api/store/user-info/${userId}`);
   return res.json();
 };

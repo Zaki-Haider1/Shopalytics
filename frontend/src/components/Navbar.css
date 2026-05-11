@@ -161,6 +161,38 @@
   border-color: var(--primary);
 }
 
+.user-profile-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-btn {
+  width: auto !important;
+  padding: 0 12px;
+  border-radius: var(--radius-full) !important;
+  gap: 8px;
+}
+
+.user-name-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .user-name-text {
+    display: none;
+  }
+  .user-btn {
+    width: 40px !important;
+    padding: 0;
+  }
+}
+
 .cart-btn {
   position: relative;
 }
@@ -199,23 +231,44 @@
 
   .navbar-links {
     position: fixed;
-    top: 80px;
+    top: 0; 
+    padding-top: 150px; /* Account for navbar + search */
     left: -100%;
-    width: 250px;
-    height: calc(100vh - 80px);
+    width: 280px;
+    height: 100vh;
     background: var(--bg-surface);
     flex-direction: column;
-    padding: 2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
     gap: 1.5rem;
     transition: left 0.3s ease;
     border-right: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
   }
 
   .navbar-links.active {
     left: 0;
   }
 
+  .navbar-actions {
+    gap: 0.5rem;
+  }
+
   .mobile-menu-btn {
     display: flex;
+    order: 10; /* Ensure it's last */
+  }
+}
+
+/* Extra spacing for wide screens to avoid jumbled look */
+@media (min-width: 901px) {
+  .navbar-links {
+    margin: 0 1.5rem;
+  }
+  
+  .navbar-actions {
+    margin-left: 1rem;
+    padding-left: 1rem;
+    border-left: 1px solid var(--border);
   }
 }

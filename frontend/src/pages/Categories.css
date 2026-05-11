@@ -107,11 +107,6 @@
   opacity: 1;
 }
 
-/* Glass effect for light mode */
-[data-theme='light'] .category-name,
-[data-theme='light'] .category-action {
-  /* color: white; still looks best on gradients */
-}
 
 @media (max-width: 640px) {
   .categories-grid {

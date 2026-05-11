@@ -1,23 +1,58 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { getCart, updateCart } from '../services/api';
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState(() => {
-    // Load initial cart from localStorage
-    const savedCart = localStorage.getItem('cart');
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
+  const { user } = useAuth();
+  const [cart, setCart] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Save cart to localStorage whenever it changes
+  // Load cart on mount or when user changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
+    const fetchCart = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          const res = await getCart(user.id);
+          if (res.success) {
+            setCart(res.cart);
+          }
+        } catch (err) {
+          console.error("Failed to fetch cart:", err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Load from localStorage for guests
+        const savedCart = localStorage.getItem('cart');
+        setCart(savedCart ? JSON.parse(savedCart) : []);
+      }
+    };
+
+    fetchCart();
+  }, [user]);
+
+  // Sync cart with backend or localStorage whenever it changes
+  useEffect(() => {
+    if (user) {
+      const syncCart = async () => {
+        try {
+          await updateCart(user.id, cart);
+        } catch (err) {
+          console.error("Failed to sync cart:", err);
+        }
+      };
+      syncCart();
+    } else {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    }
+  }, [cart, user]);
 
   const addToCart = (product) => {
-    console.log("Adding to cart:", product);
     setCart((prevCart) => {
       const productId = product._id || product.id;
       const existingItem = prevCart.find((item) => (item._id || item.id) === productId);
@@ -49,11 +84,11 @@ export const CartProvider = ({ children }) => {
   };
 
   const getCartTotal = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    return cart.reduce((total, item) => total + (item.price || 0) * (item.quantity || 0), 0);
   };
 
   const getCartCount = () => {
-    return cart.reduce((count, item) => count + item.quantity, 0);
+    return cart.reduce((count, item) => count + (item.quantity || 0), 0);
   };
 
   return (
@@ -66,6 +101,7 @@ export const CartProvider = ({ children }) => {
         clearCart,
         getCartTotal,
         getCartCount,
+        loading
       }}
     >
       {children}

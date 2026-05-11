@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Search, Sun, Moon, Menu, X, Package, Tag } from 'lucide-react';
+import { ShoppingCart, User, Search, Sun, Moon, Menu, X, Package, Tag, LogOut } from 'lucide-react';
 import { getProducts, getCategories } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import './Navbar.css';
 
 const Navbar = ({ theme, toggleTheme }) => {
@@ -10,6 +12,8 @@ const Navbar = ({ theme, toggleTheme }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [allData, setAllData] = useState({ products: [], categories: [] });
+  const { user, logout } = useAuth();
+  const { getCartCount } = useCart();
   const navigate = useNavigate();
   const searchRef = useRef(null);
 
@@ -120,19 +124,37 @@ const Navbar = ({ theme, toggleTheme }) => {
         <div className={`navbar-links ${isMenuOpen ? 'active' : ''}`}>
           <Link to="/products" className="nav-link" onClick={() => setIsMenuOpen(false)}>Shop</Link>
           <Link to="/categories" className="nav-link" onClick={() => setIsMenuOpen(false)}>Categories</Link>
+          <Link to="/orders" className="nav-link" onClick={() => setIsMenuOpen(false)}>Orders</Link>
           <Link to="/about" className="nav-link" onClick={() => setIsMenuOpen(false)}>About</Link>
+          {user?.role === 'admin' && <Link to="/admin" className="nav-link" onClick={() => setIsMenuOpen(false)}>Admin</Link>}
         </div>
 
         <div className="navbar-actions">
           <button className="icon-btn theme-toggle" onClick={toggleTheme}>
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
-          <Link to="/login" className="icon-btn">
-            <User size={20} />
-          </Link>
+          
+          <div className="navbar-user-info">
+            {user ? (
+              <div className="user-profile-nav">
+                <Link to="/login" className="icon-btn user-btn" title={user.name}>
+                  <User size={20} />
+                  <span className="user-name-text">{user.name.split(' ')[0]}</span>
+                </Link>
+                <button onClick={logout} className="icon-btn logout-btn" title="Logout">
+                  <LogOut size={18} />
+                </button>
+              </div>
+            ) : (
+              <Link to="/login" className="icon-btn">
+                <User size={20} />
+              </Link>
+            )}
+          </div>
+
           <Link to="/cart" className="icon-btn cart-btn">
             <ShoppingCart size={20} />
-            <span className="cart-badge">3</span>
+            {getCartCount() > 0 && <span className="cart-badge">{getCartCount()}</span>}
           </Link>
           <button className="icon-btn mobile-menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}

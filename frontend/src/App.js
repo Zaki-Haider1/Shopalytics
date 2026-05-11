@@ -14,6 +14,7 @@ import Categories from './pages/Categories';
 import Orders from './pages/Orders';
 
 import { CartProvider } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
 import './App.css';
 
 function App() {
@@ -29,30 +30,32 @@ function App() {
   };
 
   return (
-    <CartProvider>
-      <Router>
-        <div className="App">
-          <Navbar theme={theme} toggleTheme={toggleTheme} />
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/product/:id" element={<ProductDetails />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<About />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/admin/*" element={<AdminDashboard />} />
-            </Routes>
-          </main>
+    <AuthProvider>
+      <CartProvider>
+        <Router>
+          <div className="App">
+            <Navbar theme={theme} toggleTheme={toggleTheme} />
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/product/:id" element={<ProductDetails />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<About />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/admin/*" element={<AdminDashboard />} />
+              </Routes>
+            </main>
 
-        </div>
-      </Router>
-    </CartProvider>
+          </div>
+        </Router>
+      </CartProvider>
+    </AuthProvider>
   );
 }
 

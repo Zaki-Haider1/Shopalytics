@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Mail } from 'lucide-react';
+import { Lock, Mail, LogOut } from 'lucide-react';
 import './Auth.css';
 import { loginUser } from "../services/api";
-
-const ADMIN_EMAIL = "admin@shopalytics.com";
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
+  const { user, login, logout } = useAuth();
   const [form, setForm] = useState({
     email: '',
     password: ''
@@ -32,9 +32,12 @@ const Login = () => {
         return;
       }
 
-      // 👑 admin routing
-      if (res.user.email === ADMIN_EMAIL) {
-        navigate("/admin");
+      // Store user in AuthContext
+      login(res.user);
+
+      // Navigate based on backend response
+      if (res.redirect) {
+        navigate(res.redirect);
       } else {
         navigate("/");
       }
@@ -44,6 +47,31 @@ const Login = () => {
       alert("Server error");
     }
   };
+
+  if (user) {
+    return (
+      <div className="auth-page">
+        <div className="auth-container glass text-center">
+          <div className="auth-header">
+            <h2>You are logged in</h2>
+            <p>Welcome back, {user.name}!</p>
+          </div>
+          <div className="flex flex-col gap-4 mt-6">
+            <Link to="/" className="btn-primary w-full block text-center">
+              Continue Shopping
+            </Link>
+            <button 
+              onClick={logout} 
+              className="btn-secondary w-full flex items-center justify-center gap-2"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+            >
+              <LogOut size={18} /> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page">

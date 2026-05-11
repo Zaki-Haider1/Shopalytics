@@ -24,7 +24,7 @@ const Cart = () => {
                   <img src={item.image || `https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=200&q=80`} alt={item.name} className="cart-item-img" />
                   <div className="cart-item-details">
                     <h3>{item.name}</h3>
-                    <p className="cart-item-price">${item.price.toFixed(2)}</p>
+                    <p className="cart-item-price">Rs. {item.price.toFixed(2)}</p>
                   </div>
                   <div className="quantity-selector">
                     <button onClick={() => updateQuantity(item._id || item.id, item.quantity - 1)}>-</button>
@@ -32,7 +32,7 @@ const Cart = () => {
                     <button onClick={() => updateQuantity(item._id || item.id, item.quantity + 1)}>+</button>
                   </div>
                   <div className="cart-item-total">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    Rs. {(item.price * item.quantity).toFixed(2)}
                   </div>
                   <button 
                     className="remove-btn"
@@ -50,11 +50,11 @@ const Cart = () => {
               <h3>Order Summary</h3>
               <div className="summary-row">
                 <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>Rs. {subtotal.toFixed(2)}</span>
               </div>
               <div className="summary-row">
                 <span>Estimated Tax</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>Rs. {tax.toFixed(2)}</span>
               </div>
               <div className="summary-row">
                 <span>Shipping</span>
@@ -63,7 +63,7 @@ const Cart = () => {
               <div className="summary-divider"></div>
               <div className="summary-row total">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>Rs. {total.toFixed(2)}</span>
               </div>
               <Link to="/checkout" className="btn-primary checkout-btn mt-4">
                 Proceed to Checkout <ArrowRight size={18} className="ml-2" />

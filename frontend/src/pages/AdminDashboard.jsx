@@ -76,7 +76,7 @@ const Dashboard = () => {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-header"><span>Revenue</span> <DollarSign size={20} /></div>
-          <div className="stat-value">${data.stats.total_revenue.toLocaleString()}</div>
+          <div className="stat-value">Rs. {data.stats.total_revenue.toLocaleString()}</div>
         </div>
         <div className="stat-card">
           <div className="stat-header"><span>Orders</span> <Package size={20} /></div>
@@ -92,7 +92,7 @@ const Dashboard = () => {
         </div>
         <div className="stat-card">
           <div className="stat-header"><span>Estimated Profit</span> <TrendingUp size={20} /></div>
-          <div className="stat-value">${data.stats.total_profit.toLocaleString()}</div>
+          <div className="stat-value">Rs. {data.stats.total_profit.toLocaleString()}</div>
         </div>
       </div>
 
@@ -131,7 +131,7 @@ const Dashboard = () => {
                     <div className="p-name" style={{color: 'var(--admin-text)', fontWeight: 'bold'}}>{p.name}</div>
                     <div className="p-sales" style={{color: 'var(--admin-text-sub)'}}>{(p.total_sales || 0)} units sold</div>
                   </div>
-                  <div className="p-revenue" style={{color: 'var(--admin-accent)', fontWeight: '800'}}>${(p.total_revenue || 0).toLocaleString()}</div>
+                  <div className="p-revenue" style={{color: 'var(--admin-accent)', fontWeight: '800'}}>Rs. {(p.total_revenue || 0).toLocaleString()}</div>
                 </div>
               ))
             ) : (
@@ -211,7 +211,7 @@ const Analytics = () => {
               <tr key={i}>
                 <td>{c.name}</td>
                 <td>{c.total_orders}</td>
-                <td style={{color: 'var(--admin-accent)', fontWeight: 'bold'}}>${(c.total_spent || 0).toLocaleString()}</td>
+                <td style={{color: 'var(--admin-accent)', fontWeight: 'bold'}}>Rs. {(c.total_spent || 0).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
@@ -461,24 +461,31 @@ const AddProduct = () => {
 
               <div style={{display: 'flex', gap: '1rem'}}>
                 <div className="form-group" style={{flex: 1}}>
-                  <label>Selling Price ($) <span style={{color: 'red'}}>*</span></label>
+                  <label>Selling Price (Rs.) <span style={{color: 'red'}}>*</span></label>
                   <input 
-                    type="number" step="0.01" className="table-input" required placeholder="0.00"
-                    value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})}
+                    type="number" step="0.01" min="0" className="table-input" required placeholder="0.00"
+                    value={formData.price} onChange={e => {
+                      const val = Math.max(0, parseFloat(e.target.value) || 0);
+                      setFormData({...formData, price: e.target.value < 0 ? 0 : e.target.value});
+                    }}
                   />
                 </div>
                 <div className="form-group" style={{flex: 1}}>
-                  <label>Cost Price ($) <span style={{color: 'red'}}>*</span></label>
+                  <label>Cost Price (Rs.) <span style={{color: 'red'}}>*</span></label>
                   <input 
-                    type="number" step="0.01" className="table-input" required placeholder="0.00"
-                    value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})}
+                    type="number" step="0.01" min="0" className="table-input" required placeholder="0.00"
+                    value={formData.cost_price} onChange={e => {
+                      setFormData({...formData, cost_price: e.target.value < 0 ? 0 : e.target.value});
+                    }}
                   />
                 </div>
                 <div className="form-group" style={{flex: 1}}>
                   <label>Stock Quantity <span style={{color: 'red'}}>*</span></label>
                   <input 
-                    type="number" className="table-input" required placeholder="50"
-                    value={formData.stock_quantity} onChange={e => setFormData({...formData, stock_quantity: e.target.value})}
+                    type="number" min="0" className="table-input" required placeholder="50"
+                    value={formData.stock_quantity} onChange={e => {
+                      setFormData({...formData, stock_quantity: e.target.value < 0 ? 0 : e.target.value});
+                    }}
                   />
                 </div>
               </div>
@@ -614,15 +621,15 @@ const EditProductModal = ({ product, onClose, onUpdate }) => {
             </div>
             <div className="form-group">
               <label>Price</label>
-              <input type="number" className="table-input" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required />
+              <input type="number" min="0" step="0.01" className="table-input" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value < 0 ? 0 : e.target.value})} required />
             </div>
             <div className="form-group">
               <label>Cost Price</label>
-              <input type="number" className="table-input" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} required />
+              <input type="number" min="0" step="0.01" className="table-input" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value < 0 ? 0 : e.target.value})} required />
             </div>
             <div className="form-group">
               <label>Stock</label>
-              <input type="number" className="table-input" value={formData.stock_quantity} onChange={e => setFormData({...formData, stock_quantity: e.target.value})} required />
+              <input type="number" min="0" className="table-input" value={formData.stock_quantity} onChange={e => setFormData({...formData, stock_quantity: e.target.value < 0 ? 0 : e.target.value})} required />
             </div>
             <div className="form-group">
               <label>Supplier ID</label>
@@ -773,7 +780,7 @@ const Products = () => {
               <tr key={p._id || p.product_id}>
                 <td>{p.name}</td>
                 <td>{p.category}</td>
-                <td>${p.price}</td>
+                <td>Rs. {p.price}</td>
                 <td>
                   <div className="stock-adjustment">
                     <button onClick={() => handleStockUpdate(p._id || p.product_id, -1)} className="stock-btn sub" title="Subtract 1">

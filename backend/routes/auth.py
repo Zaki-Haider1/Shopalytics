@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify
 from db import users_collection
 import bcrypt
+from datetime import datetime
+
+ADMIN_EMAIL = "admin@shopalytics.com"
 
 auth_routes = Blueprint("auth", __name__)
 
@@ -21,8 +24,13 @@ def register():
     if users_collection.find_one({"email": data["email"]}):
         return jsonify({"success": False, "message": "Email already exists"}), 400
 
+    # Generate custom ID: cust_XXX
+    count = users_collection.count_documents({})
+    new_id = f"cust_{count + 1:03d}"
+
     # create user
     user = {
+        "_id": new_id,
         "name": data["name"],
         "email": data["email"],
         "password": hash_password(data["password"]),  # hashed
@@ -30,14 +38,16 @@ def register():
         "address": data["address"],
         "city": data["city"],
         "region": data["region"],
-        "role": "customer"
+        "created_at": datetime.utcnow(),
+        "last_login": None
     }
 
     users_collection.insert_one(user)
 
     return jsonify({
         "success": True,
-        "message": "User registered successfully"
+        "message": "User registered successfully",
+        "user_id": new_id
     }), 201
 
 
@@ -68,9 +78,19 @@ def login():
             "message": "Invalid password"
         }), 401
 
+    # Update last_login
+    users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"last_login": datetime.utcnow()}}
+    )
+
+    # Backend driven redirect
+    redirect_path = "/admin" if email == ADMIN_EMAIL else "/"
+
     return jsonify({
         "success": True,
         "message": "Login successful",
+        "redirect": redirect_path,
         "user": {
             "id": str(user["_id"]),
             "name": user["name"],

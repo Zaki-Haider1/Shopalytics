@@ -113,6 +113,10 @@ const ProductDetails = () => {
         <div className="product-info-panel">
           <div className="product-meta">
             <h1 className="detail-title">{product.name}</h1>
+            <div className="product-price">
+            <span className="current-price">Rs. {product.price.toFixed(2)}</span>
+            <span className="old-price">Rs. {(product.price * 1.2).toFixed(2)}</span>
+          </div>
             <div className="detail-rating">
               <Star className="star-icon filled" size={18} />
               <span className="review-count">({product.ratings_avg || 0})</span>
@@ -144,9 +148,9 @@ const ProductDetails = () => {
           <div className="trust-badges">
             <div className="trust-badge">
               <Truck size={24} className="text-primary" />
-              <div>
+              <div className="policy-info">
                 <h4>Free Shipping</h4>
-                <p>On orders over $50</p>
+                <p>On orders over Rs. 5000</p>
               </div>
             </div>
             <div className="trust-badge">

@@ -68,23 +68,36 @@ product_names = {
 }
 
 products = []
+
 for i in range(NUM_PRODUCTS):
     category = random.choice(CATEGORIES)
-    price = round(random.uniform(500, 50000), 2)
+
+    # Generate prices in multiples of 50 or 100
+    price = random.randrange(500, 50001, 50)
+
+    # Optional: make some prices multiples of 100
+    if random.random() < 0.5:
+        price = round(price / 100) * 100
+
+    cost_price = int(price * random.uniform(0.5, 0.8))
+
+    # Also round cost_price to nearest 50
+    cost_price = round(cost_price / 50) * 50
 
     products.append({
         "_id": f"prod_{i+1:03d}",
         "name": random.choice(product_names[category]) + f" {fake.bothify('??-###')}",
         "category": category,
         "description": fake.paragraph(nb_sentences=5),
-        "price": price,
-        "cost_price": round(price * random.uniform(0.5, 0.8), 2),
+        "price": int(price),
+        "cost_price": int(cost_price),
         "stock_quantity": random.randint(0, 500),
         "supplier_id": random.choice(suppliers)["_id"],
         "ratings_avg": round(random.uniform(2.5, 5.0), 1),
         "views_count": random.randint(0, 5000),
         "created_at": fake.date_time_between(start_date="-2y", end_date="now")
     })
+
 db.products.insert_many(products)
 
 # ─── CUSTOMERS ──────────────────────────────────────────────────────
@@ -106,10 +119,9 @@ for i in range(NUM_CUSTOMERS):
         "region": random.choice(REGIONS),
 
         # 🔹 Extra system fields (analytics / backend)
-        "loyalty_tier": random.choice(["bronze", "silver", "gold", "platinum"]),
         "created_at": created,
         "last_login": fake.date_time_between(start_date=created, end_date="now"),
-        "is_active": random.choice([True, True, True, False])
+        "cart": [{**p, "quantity": random.randint(1, 2)} for p in random.sample(products, random.randint(1, 3))] if random.random() > 0.7 else []
     })
 
 db.customers.insert_many(customers)
@@ -147,8 +159,13 @@ for i in range(NUM_ORDERS):
         "status": random.choice(["pending", "delivered", "cancelled"]),
         "items": items,
         "total_amount": round(total, 2),
-        "payment_method": random.choice(["card", "easypaisa", "cash"]),
-        "coupon_used": random.choice([None, "SALE10", "NEWUSER"]),
+        "payment_method": random.choice(["card", "online_transfer", "cash"]),
+        "shipping_address": f"{customer['address']}, {customer['city']}, {customer['region']}",
+        "customer_details": {
+            "name": customer["name"],
+            "email": customer["email"],
+            "phone": customer["phone"]
+        }
     })
 
 db.orders.insert_many(orders)
