@@ -1,7 +1,5 @@
 # 🛒 Shopalytics
 
-![Shopalytics Banner](./shopalytics_banner.png)
-
 Shopalytics is a high-performance, full-stack E-commerce platform designed with scalability and data analytics at its core. Built for a 4th-semester project, it features a distributed architecture using a **MongoDB Sharded Cluster**, a **Flask** backend, and a modern **React** frontend.
 
 ## 🚀 Key Features
