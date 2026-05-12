@@ -17,6 +17,8 @@ import {
   X,
   Plus,
   Minus,
+  Eye,
+  ClipboardList,
   Image as ImageIcon
 } from "lucide-react";
 
@@ -868,6 +870,260 @@ const Products = () => {
   );
 };
 
+/* ─────────────────────────────
+   ORDERS MANAGEMENT
+   ───────────────────────────── */
+const OrderDetailsModal = ({ order, onClose, onUpdate }) => {
+  const [updating, setUpdating] = useState(false);
+
+  const updateStatus = async (newStatus) => {
+    setUpdating(true);
+    try {
+      await axios.patch(`${API_BASE}/orders/${order._id}/status`, { status: newStatus });
+      onUpdate();
+    } catch (err) {
+      alert("Failed to update status");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <div className="admin-modal-overlay">
+      <div className="admin-modal glass-card" style={{ maxWidth: '900px' }}>
+        <div className="modal-header">
+          <div>
+            <h3 style={{ margin: 0 }}>Order Details</h3>
+            <p className="admin-page-subtitle" style={{ margin: 0 }}>ID: {order._id}</p>
+          </div>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+
+        <div className="order-details-grid">
+          <div className="order-main-col">
+            <div className="order-section-card">
+              <h4>Ordered Items</h4>
+              <div className="order-items-list">
+                {order.items.map((item, i) => (
+                  <div key={i} className="item-row-large">
+                    <div className="item-main-info">
+                      <span className="item-name-lg">{item.name || `Product ID: ${item.product_id}`}</span>
+                      <span className="item-qty-price">{item.quantity} x Rs. {(item.unit_price || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="item-subtotal-lg">Rs. {(item.subtotal || 0).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '2px solid var(--admin-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Order Total</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--admin-accent)' }}>Rs. {(order.total_amount || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="order-side-col" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="order-section-card">
+              <h4>Customer & Shipping</h4>
+              <div className="detail-row">
+                <span className="detail-label">Name</span>
+                <span className="detail-value">{order.customer_details?.name || "Guest"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Email</span>
+                <span className="detail-value" style={{ fontSize: '0.8rem' }}>{order.customer_details?.email || "N/A"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Phone</span>
+                <span className="detail-value">{order.customer_details?.phone || "N/A"}</span>
+              </div>
+              <div style={{ marginTop: '1rem' }}>
+                <span className="detail-label" style={{ display: 'block', marginBottom: '0.5rem' }}>Shipping Address</span>
+                <div style={{ fontSize: '0.9rem', fontWeight: '500', background: 'rgba(0,0,0,0.03)', padding: '0.75rem', borderRadius: '8px' }}>
+                  {order.shipping_address || "No address provided"}
+                </div>
+              </div>
+            </div>
+
+            <div className="order-section-card">
+              <h4>Order Management</h4>
+              <div className="detail-row">
+                <span className="detail-label">Date</span>
+                <span className="detail-value">{order.order_date}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Payment</span>
+                <span className="detail-value" style={{ textTransform: 'capitalize' }}>{order.payment_method || "N/A"}</span>
+              </div>
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label>Current Status</label>
+                <select 
+                  className={`table-input status-badge ${order.status}`}
+                  value={order.status}
+                  disabled={updating}
+                  onChange={(e) => updateStatus(e.target.value)}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="processing">Processing</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const OrdersManagement = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/admin/orders`);
+      setOrders(res.data);
+    } catch (err) {
+      console.error("Error fetching orders", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const handleStatusUpdate = async (id, newStatus) => {
+    try {
+      await axios.patch(`http://localhost:5000/api/admin/orders/${id}/status`, { status: newStatus });
+      setOrders(orders.map(o => o._id === id ? { ...o, status: newStatus } : o));
+    } catch (err) {
+      alert("Failed to update status");
+    }
+  };
+
+  const filteredOrders = orders.filter(o => {
+    const matchesSearch = 
+      (o.customer_details?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (o._id || "").toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  return (
+    <div className="admin-content-inner">
+      <div className="admin-header-flex">
+        <div>
+          <h2 className="admin-page-title">Manage Orders</h2>
+          <p className="admin-page-subtitle">Track and fulfill customer orders</p>
+        </div>
+        <div className="header-actions">
+          <div className="search-wrapper">
+            <input 
+              type="text" 
+              className="table-input" 
+              placeholder="Search Customer or Order ID..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <select 
+            className="table-input" 
+            style={{ width: '150px' }}
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button className="btn-sync" onClick={fetchOrders}>
+            <RefreshCw size={18} /> Refresh
+          </button>
+        </div>
+      </div>
+
+      <div className="table-container">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Order Date</th>
+              <th>Customer</th>
+              <th>Items</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredOrders.map(o => (
+              <tr key={o._id}>
+                <td style={{ fontSize: '0.85rem' }}>{o.order_date}</td>
+                <td>
+                  <div style={{ fontWeight: '600' }}>{o.customer_details?.name || "Guest"}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-sub)' }}>{o.customer_details?.email || "N/A"}</div>
+                </td>
+                <td>
+                  <div className="order-items-summary">
+                    {o.items.slice(0, 2).map((item, idx) => (
+                      <div key={idx} className="order-item-mini">
+                        {item.name || `Prod_${item.product_id?.slice(-4)}`} x{item.quantity}
+                      </div>
+                    ))}
+                    {o.items.length > 2 && <div className="order-item-mini" style={{ fontStyle: 'italic' }}>+ {o.items.length - 2} more...</div>}
+                  </div>
+                </td>
+                <td style={{ fontWeight: '700' }}>Rs. {(o.total_amount || 0).toLocaleString()}</td>
+                <td>
+                  <select 
+                    className={`table-input status-badge ${o.status}`}
+                    style={{ padding: '4px 8px', width: 'auto', fontSize: '0.75rem', cursor: 'pointer', appearance: 'none', border: 'none' }}
+                    value={o.status}
+                    onChange={(e) => handleStatusUpdate(o._id, e.target.value)}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </td>
+                <td className="table-actions">
+                  <button onClick={() => setSelectedOrder(o)} className="view-btn" title="View Order Details">
+                    <Eye size={20} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filteredOrders.length === 0 && !loading && (
+          <div className="no-data-msg">No orders found matching your criteria.</div>
+        )}
+      </div>
+
+      {selectedOrder && (
+        <OrderDetailsModal 
+          order={selectedOrder} 
+          onClose={() => setSelectedOrder(null)} 
+          onUpdate={fetchOrders}
+        />
+      )}
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
   const location = useLocation();
 
@@ -890,6 +1146,9 @@ const AdminDashboard = () => {
           <Link to="/admin/products" className={`admin-nav-link ${location.pathname === "/admin/products" ? 'active' : ''}`}>
             <ShoppingBag size={20} /> Manage Inventory
           </Link>
+          <Link to="/admin/orders" className={`admin-nav-link ${location.pathname === "/admin/orders" ? 'active' : ''}`}>
+            <ClipboardList size={20} /> Manage Orders
+          </Link>
           <Link to="/admin/add-product" className={`admin-nav-link ${location.pathname === "/admin/add-product" ? 'active' : ''}`}>
             <PlusCircle size={20} /> Add Product
           </Link>
@@ -901,6 +1160,7 @@ const AdminDashboard = () => {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/ai" element={<AIWarehousing />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/orders" element={<OrdersManagement />} />
           <Route path="/add-product" element={<AddProduct />} />
         </Routes>
       </main>

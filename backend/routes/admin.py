@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 import os
 import mysql.connector
 from dotenv import load_dotenv
-from db import products_collection
+from db import products_collection, orders_collection
 from bson import ObjectId
 
 load_dotenv()
@@ -413,3 +413,51 @@ def patch_stock(id):
             return jsonify({"message": "Stock updated successfully"}), 200
             
     return jsonify({"error": "Product not found"}), 404
+
+# ─── ORDERS MANAGEMENT (MONGODB) ──────────────────────────────
+
+@admin_routes.route("/orders", methods=["GET"])
+def get_admin_orders():
+    """Fetch all orders from MongoDB for admin view."""
+    try:
+        # Get all orders, newest first
+        orders = list(orders_collection.find().sort("order_date", -1))
+        
+        for o in orders:
+            o["_id"] = str(o["_id"])
+            if "order_date" in o:
+                # Format date for readability if it's a datetime object
+                if hasattr(o["order_date"], "strftime"):
+                    o["order_date"] = o["order_date"].strftime("%Y-%m-%d %H:%M")
+                
+        return jsonify(orders), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@admin_routes.route("/orders/<order_id>/status", methods=["PATCH"])
+def update_order_status(order_id):
+    """Update order status (e.g., from pending to shipped)."""
+    data = request.json
+    new_status = data.get("status")
+    
+    if not new_status:
+        return jsonify({"error": "Status is required"}), 400
+        
+    try:
+        # Try updating by string ID or ObjectId
+        query = {"_id": order_id}
+        result = orders_collection.update_one(query, {"$set": {"status": new_status}})
+        
+        if result.matched_count == 0:
+            try:
+                query = {"_id": ObjectId(order_id)}
+                result = orders_collection.update_one(query, {"$set": {"status": new_status}})
+            except:
+                pass
+                
+        if result.matched_count == 0:
+            return jsonify({"error": "Order not found"}), 404
+            
+        return jsonify({"message": f"Order status updated to {new_status}"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
