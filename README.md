@@ -13,13 +13,17 @@ Shopalytics is a high-performance, full-stack E-commerce platform designed with 
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: [React.js](https://reactjs.org/), [Framer Motion](https://www.framer.com/motion/), [Lucide Icons](https://lucide.dev/), [Recharts](https://recharts.org/)
+- **Frontend**: [React.js](https://reactjs.org/), [Framer Motion](https://www.framer.com/motion/), [Recharts](https://recharts.org/)
 - **Backend**: [Flask](https://flask.palletsprojects.com/), [PyMongo](https://pymongo.readthedocs.io/), [Pandas](https://pandas.pydata.org/)
 - **Databases**: 
   - **Primary (NoSQL)**: MongoDB (Sharded Cluster)
   - **Analytics (SQL)**: MySQL (Warehouse)
 - **AI**: [Google Gemini API](https://ai.google.dev/)
 - **Containerization**: [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/)
+
+## 🧱 Architecture
+
+<img width="969" height="464" alt="image" src="https://github.com/user-attachments/assets/6c0bf081-ea74-404c-9896-5d30f446f693" />
 
 ---
 
