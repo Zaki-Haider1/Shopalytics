@@ -1,6 +1,6 @@
 # 🛒 Shopalytics
 
-Shopalytics is a high-performance, full-stack E-commerce platform designed with scalability and data analytics at its core. Built for a 4th-semester project, it features a distributed architecture using a **MongoDB Sharded Cluster**, a **Flask** backend, and a modern **React** frontend.
+Shopalytics is a high-performance, full-stack E-commerce platform designed with scalability and data analytics at its core. It features a distributed architecture using a **MongoDB Sharded Cluster**, a **Flask** backend, and a modern **React** frontend. Though AI based query generation, the end user does not need any technical knowledge to get useful information/analytics from their data warehouse, all they need need to do is type what information they need and the AI handles the rest.
 
 ## 🚀 Key Features
 
